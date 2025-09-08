@@ -1,0 +1,149 @@
+.qs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
+}
+.qs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.qs-actions {
+  display: flex;
+  gap: 8px;
+}
+.qs-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--spice-section-bg, rgba(255, 255, 255, 0.06));
+  overflow: visible;
+}
+.qs-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.qs-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qs-setting label {
+  font-weight: 600;
+}
+.qs-note {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.qs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--spice-section-bg, rgba(255, 255, 255, 0.06));
+}
+.qs-row + .qs-row {
+  margin-top: 6px;
+}
+.qs-row-main {
+  display: flex;
+  flex-direction: column;
+}
+.qs-row-title {
+  font-weight: 600;
+}
+.qs-row-meta {
+  opacity: 0.7;
+  font-size: 12px;
+}
+.qs-row-actions {
+  display: flex;
+  gap: 8px;
+}
+.qs-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--spice-button, rgba(255, 255, 255, 0.12));
+  color: inherit;
+  border: none;
+  cursor: pointer;
+}
+.qs-btn:hover {
+  filter: brightness(1.1);
+}
+.qs-btn.danger {
+  background: rgba(255, 78, 78, 0.25);
+}
+.qs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qs-section-title {
+  font-weight: 700;
+  opacity: 0.85;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.qs-input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.qs-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.qs-input:disabled:hover {
+  cursor: not-allowed;
+}
+.qs-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qs-radio-group {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 6px;
+}
+.qs-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.qs-radio:disabled {
+  cursor: not-allowed;
+}
+.qs-radio:disabled + span {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.qs-items {
+  margin: 6px 0 10px 0;
+  padding: 8px;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+.qs-items-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  opacity: 0.9;
+  max-height: 220px;
+  overflow: auto;
+}
