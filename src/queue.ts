@@ -1,6 +1,6 @@
 import { APP_NAME } from "./appInfo";
 
-function normalizeUri(val: any): string | null {
+function getTrackUri(val: any): string | null {
   if (typeof val === "string" && val.startsWith("spotify:")) return val;
   if (val && typeof val.uri === "string" && val.uri.startsWith("spotify:")) return val.uri;
   if (val && val.contextTrack && typeof val.contextTrack.uri === "string" && val.contextTrack.uri.startsWith("spotify:")) return val.contextTrack.uri;
@@ -9,6 +9,7 @@ function normalizeUri(val: any): string | null {
   return null;
 }
 
+// TODO: why are we doing this?
 function dedupeConsecutive(uris: string[]): string[] {
   const out: string[] = [];
   let prev: string | null = null;
@@ -23,7 +24,7 @@ export function getQueueFromSpicetify(): string[] {
   try {
     const q = Spicetify.Queue;
     const list: string[] = [];
-    const current = normalizeUri(q?.track) || normalizeUri(Spicetify.Player?.data?.item);
+    const current = getTrackUri(q?.track) || getTrackUri(Spicetify.Player?.data?.item);
     if (current) list.push(current);
 
     const nextArr = q?.nextTracks || [];
@@ -34,7 +35,7 @@ export function getQueueFromSpicetify(): string[] {
       const isQueuedFlag = meta?.is_queued === true || meta?.is_queued === "true";
       const isQueued = provider === "queue" || isQueuedFlag;
       if (!isQueued) continue;
-      const uri = normalizeUri(it) || normalizeUri(it?.contextTrack) || normalizeUri(it?.track) || normalizeUri(it?.item);
+      const uri = getTrackUri(it);
       if (uri) {
         list.push(uri);
         queuedCount++;

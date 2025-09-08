@@ -1,4 +1,5 @@
 import { Snapshot } from "./types";
+import { formatDateTime } from "./utils";
 
 function parseLocalTrackName(uri: string): string {
   const parts = uri.split(":");
@@ -91,4 +92,13 @@ export async function getSnapshotItemNames(snapshot: Snapshot): Promise<string[]
   const names = await resolveItemNames(snapshot.items);
   namesCacheBySnapshotId.set(snapshot.id, names);
   return names;
+}
+
+export function getSnapshotGeneratedNameFor({type, createdAt, name}: Snapshot): string {
+  const prefix = type === "auto" ? "Auto" : "Manual";
+  return `${prefix} ${formatDateTime(createdAt)}`;
+}
+
+export function getSnapshotDisplayName(snapshot: Snapshot): string {
+  return snapshot.name || getSnapshotGeneratedNameFor(snapshot);
 } 

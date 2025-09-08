@@ -1,6 +1,6 @@
 import { Snapshot } from "./types";
+import { getSnapshotGeneratedNameFor } from "./names";
 import { getQueueFromSpicetify } from "./queue";
-import { formatDateTime } from "./utils";
 import { loadSnapshots, saveSnapshots } from "./storage";
 import { generateId } from "./utils";
 import { APP_NAME } from "./appInfo";
@@ -20,7 +20,7 @@ export async function createManualSnapshot(): Promise<void> {
       Spicetify.showNotification(`${APP_NAME}: No queue found. If you believe this is an error, please try to play and pause a track.`);
       return;
     }
-    const defaultName = `Manual ${new Date().toLocaleString()}`;
+    const defaultName = getSnapshotGeneratedNameFor("manual", Date.now());
     const name = window.prompt?.("Name this snapshot:", defaultName);
 
     if (!name) {
@@ -55,14 +55,11 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
       buttonEl.textContent = "Exporting…";
     }
 
-    const localUris = snapshot.items.filter(u => u.startsWith("spotify:local:"));
-    const webUris = snapshot.items.filter(u => !u.startsWith("spotify:local:"));
-
     const me = await Spicetify.CosmosAsync.get("https://api.spotify.com/v1/me");
     const userId: string | undefined = me?.id;
     if (!userId) throw new Error("No user id");
 
-    const playlistName = snapshot.name || `Queue ${formatDateTime(snapshot.createdAt)}`;
+    const playlistName = snapshot.name || getSnapshotGeneratedNameFor(snapshot.type, snapshot.createdAt);
     const created = await Spicetify.CosmosAsync.post(
       `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`,
       {
@@ -74,74 +71,16 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     const playlistId: string | undefined = created?.id;
     if (!playlistId) throw new Error("Playlist creation failed");
     const playlistUri = `spotify:playlist:${playlistId}`;
-    const corePlaylistUriV1 = `spotify:user:${userId}:playlist:${playlistId}`;
-
-    // Warm core metadata so core-playlist can resolve the newly created playlist
-    try {
-      await Spicetify.CosmosAsync.get(
-        `sp://core-playlist/v1/playlist/${corePlaylistUriV1}/metadata`,
-        { policy: { name: true } as any }
-      );
-    } catch {}
-
-    // Helpers
-    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-    const coreAddWithRetry = async (chunk: string[]): Promise<number> => {
-      const maxAttempts = 5;
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-          try {
-            await Spicetify.CosmosAsync.post(
-              `sp://core-playlist/v1/playlist/${corePlaylistUriV1}/add`,
-              { uris: chunk }
-            );
-          } catch (e1) {
-            await Spicetify.CosmosAsync.post(
-              `sp://core-playlist/v1/playlist/${corePlaylistUriV1}/add`,
-              { tracks: chunk.map(u => ({ uri: u })) }
-            );
-          }
-          return chunk.length;
-        } catch (e) {
-          console.warn(`${APP_NAME}: core add failed (attempt ${attempt}/${maxAttempts})`, e);
-          if (attempt < maxAttempts) await sleep(250 * attempt);
-        }
-      }
-      return 0;
-    };
-
-    // Build runs of consecutive items by type (web vs local) to preserve order
-    type Run = { isLocal: boolean; uris: string[] };
-    const runs: Run[] = [];
-    for (const u of snapshot.items) {
-      const isLocal = u.startsWith("spotify:local:");
-      const last = runs[runs.length - 1];
-      if (last && last.isLocal === isLocal) last.uris.push(u);
-      else runs.push({ isLocal, uris: [u] });
-    }
 
     let totalAdded = 0;
     const totalExpected = snapshot.items.length;
-    for (const run of runs) {
-      if (run.isLocal) {
-        for (let i = 0; i < run.uris.length; i += 100) {
-          const chunk = run.uris.slice(i, i + 100);
-          const added = await coreAddWithRetry(chunk);
-          totalAdded += added;
-        }
-      } else {
-        for (let i = 0; i < run.uris.length; i += 100) {
-          const chunk = run.uris.slice(i, i + 100);
-          try {
-            await Spicetify.CosmosAsync.post(
-              `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`,
-              { uris: chunk }
-            );
-            totalAdded += chunk.length;
-          } catch (e) {
-            console.warn(`${APP_NAME}: failed to add a chunk of web tracks`, e);
-          }
-        }
+    for (let i = 0; i < snapshot.items.length; i += 100) {
+      const chunk = snapshot.items.slice(i, i + 100);
+      try {
+        await Spicetify.Platform.PlaylistAPI.add(playlistUri, chunk, { after: "end" });
+        totalAdded += chunk.length;
+      } catch (e) {
+        console.warn(`${APP_NAME}: failed to add a chunk`, e);
       }
     }
 
@@ -212,7 +151,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
       await Spicetify.Player.playUri(first);
     } catch (e1) {
       try {
-        await Spicetify.Platform.PlayerAPI.play({ uri: first } as any, {}, {});
+        await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
       } catch (e2) {
         console.warn(`${APP_NAME}: failed to start first track`, e2);
         Spicetify.showNotification(`${APP_NAME}: Failed to start snapshot`);
@@ -228,7 +167,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     for (let i = 0; i < items.length; i += 100) {
       const chunk = items.slice(i, i + 100).map(u => ({ uri: u }));
       try {
-        await Spicetify.Platform.PlayerAPI.addToQueue(chunk as any);
+        await Spicetify.Platform.PlayerAPI.addToQueue(chunk);
         added += chunk.length;
       } catch (e) {
         console.warn(`${APP_NAME}: addToQueue chunk failed`, e);

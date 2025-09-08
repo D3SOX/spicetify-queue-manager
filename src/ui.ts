@@ -1,6 +1,6 @@
 import { Snapshot, Settings } from "./types";
 import { loadSnapshots, saveSettings, saveSnapshots } from "./storage";
-import { getSnapshotItemNames } from "./names";
+import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
 import { escapeHtml, downloadJson } from "./utils";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
@@ -20,7 +20,7 @@ const exportingIds = new Set<string>();
 function generateRowsHTMLFor(list: Snapshot[]): string {
   return list
     .map(s => {
-      const label = s.name ? `${s.name}` : `${s.type === "auto" ? "Auto" : "Manual"} @ ${new Date(s.createdAt).toLocaleString()}`;
+      const label = escapeHtml(getSnapshotDisplayName(s));
       const hasLocal = s.items.some(u => u.startsWith("spotify:local:"));
       const meta = `${s.items.length} items${hasLocal ? " · includes local" : ""}`;
       return `
@@ -33,6 +33,8 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
               <button class="qs-btn" data-action="toggle-items">View items</button>
               <button class="qs-btn" data-action="replace-queue">Replace queue</button>
               <button class="qs-btn" data-action="export">Export to playlist</button>
+              <button class="qs-btn" data-action="rename">Rename</button>
+              <button class="qs-btn" data-action="reset-name">Reset name</button>
               <button class="qs-btn danger" data-action="delete">Delete</button>
             </div>
           </div>
@@ -235,6 +237,35 @@ export function openManagerModal(ui: UIHandlers): void {
         const btn = target as HTMLButtonElement;
         await replaceQueueWithSnapshot(snap, btn);
         exportingIds.delete(id);
+        return;
+      }
+      if (action === "rename") {
+        e.preventDefault();
+        const input = prompt("Enter a new name.", getSnapshotDisplayName(snap));
+        if (input === null) return;
+        const newName = input.trim();
+        if (newName.length === 0) {
+          Spicetify.showNotification("Name cannot be empty", true, 2000);
+          return;
+        }
+        const snapshots = loadSnapshots();
+        const idx = snapshots.findIndex(s => s.id === id);
+        if (idx >= 0) {
+          snapshots[idx].name = newName;
+          saveSnapshots(snapshots);
+          renderList();
+        }
+        return;
+      }
+      if (action === "reset-name") {
+        e.preventDefault();
+        const snapshots = loadSnapshots();
+        const idx = snapshots.findIndex(s => s.id === id);
+        if (idx >= 0) {
+          delete snapshots[idx].name;
+          saveSnapshots(snapshots);
+          renderList();
+        }
         return;
       }
       if (action === "delete") {
