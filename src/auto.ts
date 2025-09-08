@@ -76,42 +76,6 @@ export function createAutoManager(getSettings: () => Settings) {
     activeIntervalMs = s.autoIntervalMs;
   }
 
-  // Install monkey-patch hooks to emit a custom 'queuechange' event
-  function installQueueChangeHooks(): () => void {
-    const emit = () => {
-      try { Spicetify.Player.dispatchEvent(new Event("queuechange")); } catch {}
-    };
-
-    const wrappedKeys: Array<{ obj: any; key: string; orig: any }> = [];
-    const wrap = (obj: any, key: string) => {
-      if (!obj || !obj[key] || obj[key].__wrapped) return;
-      const orig = obj[key];
-      const wrapped = async (...args: any[]) => {
-        const result = await orig.apply(obj, args);
-        emit();
-        return result;
-      };
-      try { wrapped.__wrapped = true; } catch {}
-      obj[key] = wrapped;
-      wrappedKeys.push({ obj, key, orig });
-    };
-
-    // Patch common queue mutation paths
-    try { wrap(Spicetify, "addToQueue"); } catch {}
-    try { wrap(Spicetify, "removeFromQueue"); } catch {}
-    try { wrap(Spicetify.Platform?.PlayerAPI, "addToQueue"); } catch {}
-    try { wrap(Spicetify.Platform?.PlayerAPI, "removeFromQueue"); } catch {}
-    try { wrap(Spicetify.Platform?.PlayerAPI, "insertIntoQueue"); } catch {}
-    try { wrap(Spicetify.Platform?.PlayerAPI, "clearQueue"); } catch {}
-
-    // Return uninstaller to restore originals
-    return () => {
-      for (const { obj, key, orig } of wrappedKeys) {
-        obj[key] = orig;
-      }
-    };
-  }
-
   function unregisterQueueWatcher() {
     for (const u of queueUnsubscribeHooks) {
       u();
@@ -125,27 +89,24 @@ export function createAutoManager(getSettings: () => Settings) {
     if (!s.autoEnabled) return;
 
     try {
-      const uninstall = installQueueChangeHooks();
-      queueUnsubscribeHooks.push(() => {
-        try {
-          uninstall();
-        } catch (e) {
-          console.error(`${APP_NAME}: failed to uninstall queue change hook`, e);
-        }
-      });
+      const events: any = (Spicetify as any)?.Player?.origin?._events;
+      if (!events?.addListener || !events?.removeListener) {
+        throw new Error("queue_update events API not available");
+      }
 
-      const onQueueChange = () => runSnapshotIfChanged(s);
-      Spicetify.Player.addEventListener("queuechange", onQueueChange);
+      const onQueueUpdate = (_evt: any) => runSnapshotIfChanged(s);
+      events.addListener("queue_update", onQueueUpdate);
+
       queueUnsubscribeHooks.push(() => {
         try {
-          Spicetify.Player.removeEventListener("queuechange", onQueueChange);
+          events.removeListener("queue_update", onQueueUpdate);
         } catch (e) {
-          console.error(`${APP_NAME}: failed to remove queue change listener`, e);
+          console.error(`${APP_NAME}: failed to remove queue_update listener`, e);
         }
       });
     } catch (e) {
-      console.error(`${APP_NAME}: failed to start queue change watcher`, e);
-      Spicetify.showNotification(`${APP_NAME}: failed to start queue change watcher`);
+      console.error(`${APP_NAME}: failed to start queue update watcher`, e);
+      Spicetify.showNotification(`${APP_NAME}: failed to start queue update watcher`);
     }
   }
 

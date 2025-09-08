@@ -29,7 +29,7 @@ async function main() {
 
   try {
     if (Spicetify?.Topbar?.Button) {
-      new Spicetify.Topbar.Button(APP_NAME, icon, () => openManagerModal(uiHandlers));
+      new Spicetify.Topbar.Button(APP_NAME, icon, () => openManagerModal(uiHandlers), undefined, true);
     }
   } catch {
     console.error(`${APP_NAME}: failed to add topbar button`);

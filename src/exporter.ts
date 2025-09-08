@@ -1,5 +1,5 @@
 import { Snapshot } from "./types";
-import { getSnapshotGeneratedNameFor } from "./names";
+import { getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { getQueueFromSpicetify } from "./queue";
 import { loadSnapshots, saveSnapshots } from "./storage";
 import { generateId } from "./utils";
@@ -20,7 +20,7 @@ export async function createManualSnapshot(): Promise<void> {
       Spicetify.showNotification(`${APP_NAME}: No queue found. If you believe this is an error, please try to play and pause a track.`);
       return;
     }
-    const defaultName = getSnapshotGeneratedNameFor("manual", Date.now());
+    const defaultName = getSnapshotGeneratedNameFor({type: "manual", createdAt: Date.now()});
     const name = window.prompt?.("Name this snapshot:", defaultName);
 
     if (!name) {
@@ -59,7 +59,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     const userId: string | undefined = me?.id;
     if (!userId) throw new Error("No user id");
 
-    const playlistName = snapshot.name || getSnapshotGeneratedNameFor(snapshot.type, snapshot.createdAt);
+    const playlistName = getSnapshotDisplayName(snapshot);
     const created = await Spicetify.CosmosAsync.post(
       `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`,
       {
@@ -146,7 +146,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
       console.warn(`${APP_NAME}: clearQueue failed (non-fatal)`, e);
     }
 
-    // Start playback with the first item (supports local and web URIs)
+    // Start playback with the first item
     try {
       await Spicetify.Player.playUri(first);
     } catch (e1) {
@@ -162,7 +162,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     // Give the player a brief moment to switch track
     await new Promise(r => setTimeout(r, 250));
 
-    // Enqueue remaining items in order (supports locals)
+    // Enqueue remaining items in order
     let added = 0;
     for (let i = 0; i < items.length; i += 100) {
       const chunk = items.slice(i, i + 100).map(u => ({ uri: u }));

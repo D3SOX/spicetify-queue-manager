@@ -101,6 +101,9 @@ export function openManagerModal(ui: UIHandlers): void {
               <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> Check for new items</label>
               <div style="opacity:0.7; font-size:12px">Only trigger it when there is a new song that was not in the previous snapshot.</div>
             </div>
+            <div class="qs-setting" style="margin-top:6px">
+              <div style="opacity:0.7; font-size:12px">Equal queues are never saved as automatic snapshots.</div>
+            </div>
           </div>
           <div class="qs-right">
             <div class="qs-setting">

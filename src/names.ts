@@ -94,11 +94,11 @@ export async function getSnapshotItemNames(snapshot: Snapshot): Promise<string[]
   return names;
 }
 
-export function getSnapshotGeneratedNameFor({type, createdAt, name}: Snapshot): string {
-  const prefix = type === "auto" ? "Auto" : "Manual";
-  return `${prefix} ${formatDateTime(createdAt)}`;
+export function getSnapshotGeneratedNameFor(snapshot: Pick<Snapshot, "type" | "createdAt">): string {
+  const prefix = snapshot.type === "auto" ? "Auto" : "Manual";
+  return `${prefix} ${formatDateTime(snapshot.createdAt)}`;
 }
 
-export function getSnapshotDisplayName(snapshot: Snapshot): string {
+export function getSnapshotDisplayName(snapshot: Pick<Snapshot, "type" | "createdAt" | "name">): string {
   return snapshot.name || getSnapshotGeneratedNameFor(snapshot);
 } 
