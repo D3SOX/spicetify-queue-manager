@@ -1,14 +1,14 @@
 import { Snapshot, Settings } from "./types";
-import { loadSnapshots, saveSettings, saveSnapshots } from "./storage";
+import { loadSnapshots, pruneAutosToMax, saveSettings, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
 import { escapeHtml, downloadJson } from "./utils";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
 import { APP_NAME } from "./appInfo";
 import "./ui.css";
+import { getSortedSnapshots } from "./storage";
 
 export type UIHandlers = {
-  pruneAutosToMax: () => void;
   getSettings: () => Settings;
   setSettings: (s: Settings) => void;
 };
@@ -47,7 +47,7 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
 }
 
 function generateSectionsHTML(): string {
-  const snapshots = loadSnapshots().sort((a, b) => b.createdAt - a.createdAt);
+  const snapshots = getSortedSnapshots();
   const autos = snapshots.filter(s => s.type === "auto");
   const manuals = snapshots.filter(s => s.type === "manual");
   const autoRows = generateRowsHTMLFor(autos);
@@ -292,7 +292,6 @@ export function openManagerModal(ui: UIHandlers): void {
       const s0 = ui.getSettings();
       const newSettings = { ...s0, autoEnabled };
       ui.setSettings(newSettings);
-      saveSettings(ui.getSettings());
       applyControlDisabledStates();
       return;
     }
@@ -302,7 +301,6 @@ export function openManagerModal(ui: UIHandlers): void {
       const mode = radio.value === "on-change" ? "on-change" : "timer";
       const newSettings: Settings = { ...s0, autoMode: mode };
       ui.setSettings(newSettings);
-      saveSettings(newSettings);
       applyControlDisabledStates();
       return;
     }
@@ -312,7 +310,6 @@ export function openManagerModal(ui: UIHandlers): void {
       const s0 = ui.getSettings();
       const newSettings: Settings = { ...s0, onlyNewItems };
       ui.setSettings(newSettings);
-      saveSettings(newSettings);
       return;
     }
     if (target.id === "qs-auto-interval-mins") {
@@ -322,7 +319,6 @@ export function openManagerModal(ui: UIHandlers): void {
       const clamped = isFinite(mins) && mins >= 0.5 ? mins : s0.autoIntervalMs / 60000;
       const newSettings = { ...s0, autoIntervalMs: Math.round(clamped * 60000) };
       ui.setSettings(newSettings);
-      saveSettings(ui.getSettings());
       return;
     }
     if (target.id === "qs-max-autos") {
@@ -330,9 +326,9 @@ export function openManagerModal(ui: UIHandlers): void {
       const s0 = ui.getSettings();
       const num = parseInt(input.value, 10);
       const max = Number.isFinite(num) && num > 0 ? num : s0.maxAutosnapshots;
-      ui.setSettings({ ...s0, maxAutosnapshots: max });
-      saveSettings(ui.getSettings());
-      ui.pruneAutosToMax();
+      const newSettings = { ...s0, maxAutosnapshots: max };
+      ui.setSettings(newSettings);
+      pruneAutosToMax(newSettings);
       renderList();
       return;
     }

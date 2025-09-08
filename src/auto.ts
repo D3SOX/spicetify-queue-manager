@@ -1,7 +1,7 @@
 import { Snapshot, Settings, AutoMode, QueueUpdateEvent } from "./types";
 import { getQueueFromSpicetify } from "./queue";
 import { areQueuesEqual, generateId } from "./utils";
-import { loadSnapshots, saveSnapshots } from "./storage";
+import { addSnapshot, getSortedSnapshots, pruneAutosToMax as storagePruneAutosToMax } from "./storage";
 import { APP_NAME } from "./appInfo";
 
 
@@ -17,22 +17,6 @@ export function createAutoManager(getSettings: () => Settings) {
       clearInterval(autoTimer);
       autoTimer = null;
     }
-  }
-
-  function addSnapshotToStorage(newSnapshot: Snapshot, s: Settings): void {
-    const all = loadSnapshots().sort((a, b) => b.createdAt - a.createdAt);
-    const manuals = all.filter(snap => snap.type === "manual");
-    const autos = all.filter(snap => snap.type === "auto").concat([newSnapshot]).slice(0, s.maxAutosnapshots);
-    saveSnapshots([...manuals, ...autos].sort((a, b) => b.createdAt - a.createdAt));
-  }
-
-  // this is used by the UI
-  function pruneAutosToMax(): void {
-    const s = getSettings();
-    const all = loadSnapshots().sort((a, b) => b.createdAt - a.createdAt);
-    const manuals = all.filter(snap => snap.type === "manual");
-    const autos = all.filter(snap => snap.type === "auto").slice(0, s.maxAutosnapshots);
-    saveSnapshots([...manuals, ...autos].sort((a, b) => b.createdAt - a.createdAt));
   }
 
   async function runSnapshotIfChanged(s: Settings) {
@@ -62,7 +46,7 @@ export function createAutoManager(getSettings: () => Settings) {
         type: "auto",
         items: currentItems,
       };
-      addSnapshotToStorage(snapshot, s);
+      addSnapshot(snapshot, s);
       lastSnapshotItems = currentItems;
     } catch (e) {
       console.error(`${APP_NAME}: auto snapshot error`, e);
@@ -120,7 +104,7 @@ export function createAutoManager(getSettings: () => Settings) {
   }
 
   function primeFromExisting(): void {
-    const existing = loadSnapshots().sort((a, b) => b.createdAt - a.createdAt)[0];
+    const existing = getSortedSnapshots()[0];
     if (existing?.items?.length) lastSnapshotItems = existing.items.slice();
   }
 
@@ -157,5 +141,5 @@ export function createAutoManager(getSettings: () => Settings) {
     currentMode = desiredMode;
   }
 
-  return { startAutoTimer, primeFromExisting, pruneAutosToMax, applyAutoMode };
+  return { startAutoTimer, primeFromExisting, applyAutoMode };
 } 

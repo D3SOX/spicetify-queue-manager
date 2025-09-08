@@ -47,6 +47,36 @@ export function loadSnapshots(): Snapshot[] {
   }
 }
 
+function sortSnapshotsDescending(snapshots: Snapshot[]): Snapshot[] {
+  return snapshots.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export function saveSnapshots(snapshots: Snapshot[]): void {
+  sortSnapshotsDescending(snapshots);
   Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(snapshots));
+}
+
+export function getSortedSnapshots(): Snapshot[] {
+  return sortSnapshotsDescending(loadSnapshots());
+}
+
+export function pruneAutosToMax(settings: Settings): void {
+  const all = getSortedSnapshots();
+  const manuals = all.filter(snap => snap.type === "manual");
+  const autos = all.filter(snap => snap.type === "auto").slice(0, settings.maxAutosnapshots);
+  saveSnapshots([...manuals, ...autos]);
+}
+
+export function addSnapshot(newSnapshot: Snapshot, settings?: Settings): void {
+  const s = settings ?? loadSettings();
+  const existing = loadSnapshots();
+  const manuals = existing.filter(snap => snap.type === "manual");
+  const autos = existing.filter(snap => snap.type === "auto");
+
+  if (newSnapshot.type === "auto") {
+    const autosWithNew = [newSnapshot, ...autos].slice(0, s.maxAutosnapshots);
+    saveSnapshots([...manuals, ...autosWithNew]);
+  } else {
+    saveSnapshots([newSnapshot, ...manuals, ...autos]);
+  }
 }

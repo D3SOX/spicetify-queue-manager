@@ -16,7 +16,6 @@ async function main() {
   autoMgr.applyAutoMode(settings);
 
   const uiHandlers: UIHandlers = {
-    pruneAutosToMax: autoMgr.pruneAutosToMax,
     getSettings: () => settings,
     setSettings: (s: Settings) => {
       settings = s;

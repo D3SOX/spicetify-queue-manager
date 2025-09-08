@@ -1,17 +1,9 @@
 import { Snapshot } from "./types";
 import { getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { getQueueFromSpicetify } from "./queue";
-import { loadSnapshots, saveSnapshots } from "./storage";
+import { addSnapshot } from "./storage";
 import { generateId } from "./utils";
 import { APP_NAME } from "./appInfo";
-
-function addSnapshotToStorage(newSnapshot: Snapshot): void {
-  const existing = loadSnapshots();
-  const autos: Snapshot[] = existing.filter(s => s.type === "auto");
-  const manuals: Snapshot[] = existing.filter(s => s.type === "manual");
-  const updated = [newSnapshot, ...manuals, ...autos];
-  saveSnapshots(updated.sort((a, b) => b.createdAt - a.createdAt));
-}
 
 export async function createManualSnapshot(): Promise<void> {
   try {
@@ -35,7 +27,7 @@ export async function createManualSnapshot(): Promise<void> {
       type: "manual",
       items,
     };
-    addSnapshotToStorage(snapshot);
+    addSnapshot(snapshot);
     Spicetify.showNotification(`${APP_NAME}: Snapshot saved`);
   } catch (e) {
     console.error(`${APP_NAME}: manual snapshot failed`, e);
