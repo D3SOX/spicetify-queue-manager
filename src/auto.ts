@@ -20,12 +20,13 @@ export function createAutoManager(getSettings: () => Settings) {
   }
 
   function addSnapshotToStorage(newSnapshot: Snapshot, s: Settings): void {
-    const all = loadSnapshots();
-    const updated = [newSnapshot, ...all].sort((a, b) => b.createdAt - a.createdAt).slice(0, s.maxAutosnapshots);
-    saveSnapshots(updated);
+    const all = loadSnapshots().sort((a, b) => b.createdAt - a.createdAt);
+    const manuals = all.filter(snap => snap.type === "manual");
+    const autos = all.filter(snap => snap.type === "auto").concat([newSnapshot]).slice(0, s.maxAutosnapshots);
+    saveSnapshots([...manuals, ...autos].sort((a, b) => b.createdAt - a.createdAt));
   }
 
-  // this is used bt the UI
+  // this is used by the UI
   function pruneAutosToMax(): void {
     const s = getSettings();
     const all = loadSnapshots().sort((a, b) => b.createdAt - a.createdAt);
