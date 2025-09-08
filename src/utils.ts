@@ -30,6 +30,8 @@ export function areQueuesEqual(a: string[], b: string[]): boolean {
 }
 
 export function downloadJson(filename: string, data: any): void {
+  // TODO: this seems to directly save it to the downloads for me on linux with the Spotify flatpak.
+  // not sure what exactly is causing this
   try {
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });

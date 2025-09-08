@@ -169,19 +169,19 @@ export function openManagerModal(ui: UIHandlers): void {
     if (target.id === "qs-export-settings") {
       e.preventDefault();
       const settings = ui.getSettings();
-      downloadJson(`settings.json`, settings);
+      downloadJson(`${APP_NAME}-settings.json`, settings);
       return;
     }
     if (target.id === "qs-export-manuals") {
       e.preventDefault();
       const data = loadSnapshots().filter(s => s.type === "manual");
-      downloadJson(`manual-snapshots.json`, data);
+      downloadJson(`${APP_NAME}-manual-snapshots.json`, data);
       return;
     }
     if (target.id === "qs-export-autos") {
       e.preventDefault();
       const data = loadSnapshots().filter(s => s.type === "auto");
-      downloadJson(`auto-snapshots.json`, data);
+      downloadJson(`${APP_NAME}-auto-snapshots.json`, data);
       return;
     }
     if (target.id === "qs-refresh") {
