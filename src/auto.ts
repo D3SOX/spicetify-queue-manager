@@ -1,4 +1,4 @@
-import { Snapshot, Settings, AutoMode } from "./types";
+import { Snapshot, Settings, AutoMode, QueueUpdateEvent } from "./types";
 import { getQueueFromSpicetify } from "./queue";
 import { areQueuesEqual, generateId } from "./utils";
 import { loadSnapshots, saveSnapshots } from "./storage";
@@ -89,12 +89,20 @@ export function createAutoManager(getSettings: () => Settings) {
     if (!s.autoEnabled) return;
 
     try {
-      const events: any = (Spicetify as any)?.Player?.origin?._events;
+      type EventFunc = (event: string, callback: (...args: any[]) => void) => void;
+      const events: {
+        addListener?: EventFunc;
+        removeListener: EventFunc;
+      } | undefined = (Spicetify as any)?.Player?.origin?._events;
       if (!events?.addListener || !events?.removeListener) {
         throw new Error("queue_update events API not available");
       }
 
-      const onQueueUpdate = (_evt: any) => runSnapshotIfChanged(s);
+
+      const onQueueUpdate = (evt: QueueUpdateEvent) => {
+        runSnapshotIfChanged(s);
+        console.log(`${APP_NAME}: queue_update`, evt);
+      };
       events.addListener("queue_update", onQueueUpdate);
 
       queueUnsubscribeHooks.push(() => {

@@ -17,3 +17,14 @@ export type Settings = {
   autoMode: AutoMode;
   onlyNewItems: boolean;
 };
+
+export type QueueUpdateEventData = {
+  current: Spicetify.PlayerTrack;
+  queued: Spicetify.PlayerTrack[];
+  nextUp: Spicetify.PlayerTrack[];
+};
+
+export type QueueUpdateEvent = Event & {
+  type: "queue_update";
+  data?: QueueUpdateEventData;
+};
