@@ -29,12 +29,37 @@ export function areQueuesEqual(a: string[], b: string[]): boolean {
   return true;
 }
 
-export function downloadJson(filename: string, data: any): void {
-  // TODO: this seems to directly save it to the downloads for me on linux with the Spotify flatpak.
-  // not sure what exactly is causing this
+export async function downloadJson(filename: string, data: any): Promise<void> {
+  // Try File System Access API
   try {
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });
+
+    const w: any = window as any;
+    if (w && typeof w.showSaveFilePicker === "function") {
+      try {
+        const handle = await w.showSaveFilePicker({
+          suggestedName: filename,
+          types: [
+            {
+              description: "JSON Files",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (err: any) {
+        if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+          Spicetify.showNotification(`${APP_NAME}: Export canceled`);
+          return;
+        }
+      }
+    }
+
+    // Fallback to anchor-triggered download (default download directory)
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -43,8 +68,9 @@ export function downloadJson(filename: string, data: any): void {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    Spicetify.showNotification(`${APP_NAME}: Exported ${filename} to Downloads folder`);
   } catch (e) {
     console.warn(`${APP_NAME}: downloadJson failed`, e);
     Spicetify.showNotification(`${APP_NAME}: Failed to export JSON`);
   }
-} 
+}
