@@ -90,7 +90,8 @@ export function openManagerModal(ui: UIHandlers): void {
         </div>
         <div class="qs-settings">
           <div class="qs-setting">
-            <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots</label>
+            <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots <span style="opacity:0.8">(experimental)</span></label>
+            <div style="color:#b45309; font-size:12px; margin-top:4px">This feature is experimental and may trigger many snapshots. Use with caution.</div>
             <div style="opacity:0.7; font-size:12px">Mode 
               <div class="qs-radio-group" id="qs-auto-mode-group">
                 <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>Time-based</span></label>
@@ -169,20 +170,17 @@ export function openManagerModal(ui: UIHandlers): void {
     if (target.id === "qs-export-settings") {
       e.preventDefault();
       const settings = ui.getSettings();
-      downloadJson(`${APP_NAME}-settings.json`, settings);
-      return;
+      return await downloadJson(`${APP_NAME}-settings.json`, settings);
     }
     if (target.id === "qs-export-manuals") {
       e.preventDefault();
       const data = loadSnapshots().filter(s => s.type === "manual");
-      downloadJson(`${APP_NAME}-manual-snapshots.json`, data);
-      return;
+      return await downloadJson(`${APP_NAME}-manual-snapshots.json`, data);
     }
     if (target.id === "qs-export-autos") {
       e.preventDefault();
       const data = loadSnapshots().filter(s => s.type === "auto");
-      downloadJson(`${APP_NAME}-auto-snapshots.json`, data);
-      return;
+      return await downloadJson(`${APP_NAME}-auto-snapshots.json`, data);
     }
     if (target.id === "qs-refresh") {
       e.preventDefault();
