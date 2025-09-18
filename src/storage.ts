@@ -5,7 +5,7 @@ const DEFAULT_SETTINGS: Settings = {
   autoEnabled: false,
   autoIntervalMs: 300000,
   maxAutosnapshots: 20,
-  autoMode: "on-change",
+  autoMode: "timer",
   onlyNewItems: true,
 };
 
