@@ -1,6 +1,6 @@
 import { Settings, Snapshot } from "./types";
 
-const SETTINGS_KEY = "queue-saver:settings";
+const SETTINGS_KEY = "queue-manager:settings";
 const DEFAULT_SETTINGS: Settings = {
   autoEnabled: false,
   autoIntervalMs: 300000,
@@ -32,11 +32,11 @@ export function saveSettings(s: Settings): void {
   Spicetify.LocalStorage.set(SETTINGS_KEY, JSON.stringify(s));
 }
 
-const STORAGE_KEY = "queue-saver:snapshots";
+const SNAPSHOTS_KEY = "queue-manager:snapshots";
 
 export function loadSnapshots(): Snapshot[] {
   try {
-    const raw = Spicetify.LocalStorage.get(STORAGE_KEY);
+    const raw = Spicetify.LocalStorage.get(SNAPSHOTS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Snapshot[];
     // ensuring json structure would be good here too
@@ -53,7 +53,7 @@ function sortSnapshotsDescending(snapshots: Snapshot[]): Snapshot[] {
 
 export function saveSnapshots(snapshots: Snapshot[]): void {
   sortSnapshotsDescending(snapshots);
-  Spicetify.LocalStorage.set(STORAGE_KEY, JSON.stringify(snapshots));
+  Spicetify.LocalStorage.set(SNAPSHOTS_KEY, JSON.stringify(snapshots));
 }
 
 export function getSortedSnapshots(): Snapshot[] {
