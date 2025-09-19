@@ -1,6 +1,13 @@
 # Spicetify Queue Manager
 
+<div align="center">
+<img width="548" height="562" alt="image" src="https://github.com/user-attachments/assets/f92e0bde-5681-4ea8-827e-f723af503f78" />
+
 Do you hate it when Spotify randomly decides your queue is gone — or just want to manage queues more easily? Spicetify Queue Manager snapshots your current queue (including local files), lets you restore it later, and export snapshots to playlists.
+</div>
+
+## Status
+⚠️ Early development. Core features are being built and refined.
 
 ## What it does
 - Save your current queue as named snapshots
@@ -13,22 +20,20 @@ Do you hate it when Spotify randomly decides your queue is gone — or just want
 ## Why
 Spotify can sometimes clear or reshuffle your queue unexpectedly. This extension preserves your listening state by periodically recording `Spicetify.Queue` and providing quick restore/export actions.
 
-## Status
-Early development. Core features are being built and refined.
-
 ## Development
 Requires Spicetify and pnpm.
 
 ```bash
 pnpm install
 pnpm watch   # or: pnpm build
+spicetify apply -n
 ```
 
-This project is built with Spicetify Creator and outputs to `dist/`.
+This project is built with [Spicetify Creator](https://spicetify.app/docs/development/spicetify-creator)
 
 ## Notes
 - Local files are supported by reading from `Spicetify.Queue`, so snapshots include tracks beyond the Web API scope.
 - If something looks off, open DevTools and inspect `Spicetify.Queue` to help debug.
 
 ## License
-MIT
+[GNU General Public License v3.0](./LICENSE)
