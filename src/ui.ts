@@ -170,7 +170,7 @@ export function openManagerModal(ui: UIHandlers): void {
             <div class="qs-dim">Mode 
               <div class="qs-radio-group" id="qs-auto-mode-group">
                 <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} Time-based</span></label>
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental</span>: this mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental!</span>This mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
               </div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
@@ -198,7 +198,7 @@ export function openManagerModal(ui: UIHandlers): void {
             <div class="qs-setting">
               <label>${getIconMarkup("chart-up")} Max automatic snapshots</label>
               <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
-              <div style="opacity:0.7; font-size:12px">Older snapshots are pruned</div>
+              <div style="opacity:0.7; font-size:12px">Older snapshots are pruned. Be careful when changing this</div>
             </div>
             <div class="qs-setting">
               <label>${getIconMarkup("queue")} Queue max size</label>
