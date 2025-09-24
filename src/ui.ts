@@ -1,4 +1,4 @@
-import { Snapshot, Settings, ButtonTone, IconName, ButtonRenderOptions } from "./types";
+import { Snapshot, Settings, ButtonTone, ButtonRenderOptions } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSettings, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
@@ -19,14 +19,14 @@ const exportingIds = new Set<string>();
 
 const DEFAULT_ICON_SIZE = 16;
 
-function getIconMarkup(icon: IconName, size = DEFAULT_ICON_SIZE): string {
+function getIconMarkup(icon: Spicetify.Icon, size = DEFAULT_ICON_SIZE): string {
   const iconMap = (Spicetify.SVGIcons ?? {}) as Record<string, string>;
   const raw = iconMap[icon];
   if (!raw) return "";
   return `<span class="qs-btn-icon" data-icon-name="${escapeHtml(icon)}"><svg class="qs-svg-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false" style="width:${size}px;height:${size}px;">${raw}</svg></span>`;
 }
 
-function renderButton(label: string, icon: IconName, options: ButtonRenderOptions = {}): string {
+function renderButton(label: string, icon: Spicetify.Icon, options: ButtonRenderOptions = {}): string {
   const { action, id, tone = "default", title } = options;
   const classes = ["qs-btn"];
   if (tone === "danger") classes.push("danger");
@@ -41,7 +41,7 @@ function renderButton(label: string, icon: IconName, options: ButtonRenderOption
   return `<button type="button" class="${classes.join(" ")}"${attrString}>${iconHtml}<span class="qs-btn-label">${escapeHtml(label)}</span></button>`;
 }
 
-function renderActionIconButton(action: string, icon: IconName, title: string): string {
+function renderActionIconButton(action: string, icon: Spicetify.Icon, title: string): string {
   return `<button type="button" class="qs-icon-btn" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
 }
 
