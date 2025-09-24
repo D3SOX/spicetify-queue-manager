@@ -9,7 +9,7 @@ Do you hate it when Spotify randomly decides your queue is gone — or just want
 </div>
 
 ## Status
-⚠️ Early development. Core features are being built and refined.
+🚧 Beta. Core features are implemented and undergoing polish.
 
 ## What it does
 - Save your current queue as named snapshots
@@ -23,7 +23,7 @@ Do you hate it when Spotify randomly decides your queue is gone — or just want
 Spotify can sometimes clear or reshuffle your queue unexpectedly. This extension preserves your listening state by periodically recording `Spicetify.Queue` and providing quick restore/export actions.
 
 ## Development
-Requires Spicetify and pnpm.
+Requires Spicetify CLI and pnpm.
 
 ```bash
 pnpm install
