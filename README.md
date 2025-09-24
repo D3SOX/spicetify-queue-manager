@@ -1,7 +1,8 @@
 # Spicetify Queue Manager
 
 <div align="center">
-<img width="548" height="562" alt="image" src="https://github.com/user-attachments/assets/f92e0bde-5681-4ea8-827e-f723af503f78" />
+<img width="550" height="1040" alt="image" src="https://github.com/user-attachments/assets/250c094c-26f2-42c7-b20e-7cd16a77a7ef" />
+
 
 Do you hate it when Spotify randomly decides your queue is gone — or just want to manage queues more easily? Spicetify Queue Manager snapshots your current queue (including local files), lets you restore it later, and export snapshots to playlists.
 </div>
