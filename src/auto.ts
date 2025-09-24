@@ -144,12 +144,11 @@ export function createAutoManager(getSettings: () => Settings) {
   return { startAutoTimer, primeFromExisting, applyAutoMode };
 } 
 
-// Lightweight watcher that warns when the queue is nearly full.
 export function createQueueCapacityWatcher(getSettings: () => Settings) {
   let unsubscribe: (() => void) | null = null;
   let lastWarnRemaining: number | null = null;
   let lastWarnAt = 0;
-  const warnCooldownMs = 30000; // 30s cooldown to avoid spam
+  const warnCooldownMs = 30000;
 
   async function checkAndWarnOnce(): Promise<void> {
     try {
@@ -205,7 +204,6 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
         }
       };
 
-      // Initial check on startup
       checkAndWarnOnce();
     } catch (e) {
       console.error(`${APP_NAME}: failed to start capacity watcher`, e);

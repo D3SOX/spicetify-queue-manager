@@ -8,9 +8,7 @@ const DEFAULT_SETTINGS: Settings = {
   autoMode: "timer",
   onlyNewItems: true,
   queueWarnEnabled: true,
-  // Heuristic: anecdotal reports suggest ~80 items. Includes current track + queued
   queueMaxSize: 80,
-  // Warn when 5 or fewer slots remain
   queueWarnThreshold: 5,
 };
 

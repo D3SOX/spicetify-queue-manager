@@ -15,7 +15,6 @@ async function main() {
   autoMgr.primeFromExisting();
   autoMgr.applyAutoMode(settings);
 
-  // Start capacity watcher independently of auto snapshots
   const capacityWatcher = createQueueCapacityWatcher(() => settings);
   capacityWatcher.start();
 
@@ -25,7 +24,6 @@ async function main() {
       settings = s;
       saveSettings(s);
       autoMgr.applyAutoMode(s);
-      // If user toggles warning settings, trigger a fresh check
       capacityWatcher.checkAndWarnOnce();
     },
   };
