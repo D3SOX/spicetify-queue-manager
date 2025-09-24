@@ -86,7 +86,7 @@
             <div class="qs-dim">Mode 
               <div class="qs-radio-group" id="qs-auto-mode-group">
                 <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${"timer"===a.autoMode?"checked":""} ${a.autoEnabled?"":"disabled"}/><span>${S("clock")} Time-based</span></label>
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${"on-change"===a.autoMode?"checked":""} ${a.autoEnabled?"":"disabled"}/><span>${S("shuffle")} Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental</span>: this mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${"on-change"===a.autoMode?"checked":""} ${a.autoEnabled?"":"disabled"}/><span>${S("shuffle")} Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental!</span>This mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
               </div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
@@ -114,7 +114,7 @@
             <div class="qs-setting">
               <label>${S("chart-up")} Max automatic snapshots</label>
               <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${a.maxAutosnapshots}" ${a.autoEnabled?"":"disabled"} />
-              <div style="opacity:0.7; font-size:12px">Older snapshots are pruned</div>
+              <div style="opacity:0.7; font-size:12px">Older snapshots are pruned. Be careful when changing this</div>
             </div>
             <div class="qs-setting">
               <label>${S("queue")} Queue max size</label>
