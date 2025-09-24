@@ -4,7 +4,8 @@
 
 Do you hate it when Spotify randomly decides your queue is gone — or just want to manage queues more easily? Spicetify Queue Manager snapshots your current queue (including local files), lets you restore it later, and export snapshots to playlists.
 
-<img height="750" alt="image" src="https://github.com/user-attachments/assets/69747743-d1e9-4385-9031-f7b769836f8f" />
+<img height="750" alt="image" src="https://github.com/user-attachments/assets/47aae376-0eb7-4b6d-a566-fc5f1bacb29e" />
+
 
 </div>
 
