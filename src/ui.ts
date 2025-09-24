@@ -4,7 +4,7 @@ import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
-import { APP_NAME } from "./appInfo";
+import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
 import "./ui.css";
 import { getSortedSnapshots } from "./storage";
 
@@ -147,6 +147,8 @@ function generateSectionsHTML(): string {
 }
 
 export function openManagerModal(ui: UIHandlers): void {
+  const versionBadge = `<span class="qs-pill qs-pill--version">${escapeHtml(`v${APP_VERSION}`)}</span>`;
+  const channelBadge = APP_CHANNEL ? `<span class="qs-pill qs-pill--channel">${escapeHtml(APP_CHANNEL.toUpperCase())}</span>` : "";
   const sections = generateSectionsHTML();
   const s = ui.getSettings();
 
@@ -155,10 +157,7 @@ export function openManagerModal(ui: UIHandlers): void {
         <div class="qs-header">
           <div class="qs-header-title">
             <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
-            <div>
-              <div class="qs-header-name">Actions & Settings</div>
-              <div class="qs-header-sub">Manage automatic saves and queue capacity warnings</div>
-            </div>
+            <span class="qs-header-badges">${versionBadge}${channelBadge}</span>
           </div>
           <div class="qs-actions">
             ${renderButton("Refresh", "repeat", { id: "qs-refresh", tone: "subtle" })}
@@ -166,8 +165,17 @@ export function openManagerModal(ui: UIHandlers): void {
           </div>
         </div>
         <div class="qs-settings">
+          <div class="qs-settings-header">
+            <div class="qs-section-heading">
+              ${getIconMarkup("grid-view")}
+              <div class="qs-section-text">
+                <div class="qs-section-name">Settings</div>
+                <div class="qs-section-caption">Tune automation and queue alerts</div>
+              </div>
+            </div>
+          </div>
           <div class="qs-setting">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots</label>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> ${getIconMarkup("brightness")}Enable automatic snapshots</label>
             <div class="qs-dim">Mode 
               <div class="qs-radio-group" id="qs-auto-mode-group">
                 <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} Time-based</span></label>

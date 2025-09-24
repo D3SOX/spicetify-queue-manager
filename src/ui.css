@@ -20,6 +20,21 @@
   gap: 12px;
   font-weight: 600;
 }
+.qs-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qs-header-app {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.qs-header-badges {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
 .qs-header-icon {
   display: inline-flex;
   align-items: center;
@@ -32,7 +47,8 @@
 .qs-header-name {
   font-size: 18px;
 }
-.qs-header-sub {
+.qs-header-sub,
+.qs-header-sub-alt {
   font-size: 13px;
   opacity: 0.75;
 }
@@ -51,6 +67,14 @@
   background: var(--spice-section-bg, rgba(255, 255, 255, 0.05));
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: visible;
+}
+.qs-settings-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 .qs-right {
   display: flex;
@@ -347,6 +371,12 @@
 }
 .qs-pill--accent {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(99, 102, 241, 0.85));
+}
+.qs-pill--version {
+  background: rgba(255, 255, 255, 0.12);
+}
+.qs-pill--channel {
+  background: rgba(248, 113, 113, 0.35);
 }
 
 @media (max-width: 860px) {
