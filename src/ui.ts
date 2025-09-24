@@ -1,4 +1,4 @@
-import { Snapshot, Settings } from "./types";
+import { Snapshot, Settings, ButtonTone, IconName, ButtonRenderOptions } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSettings, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
@@ -19,23 +19,14 @@ const exportingIds = new Set<string>();
 
 const DEFAULT_ICON_SIZE = 16;
 
-type ButtonTone = "primary" | "danger" | "subtle" | "default";
-
-function getIconMarkup(icon: string, size = DEFAULT_ICON_SIZE): string {
+function getIconMarkup(icon: IconName, size = DEFAULT_ICON_SIZE): string {
   const iconMap = (Spicetify.SVGIcons ?? {}) as Record<string, string>;
   const raw = iconMap[icon];
   if (!raw) return "";
   return `<span class="qs-btn-icon" data-icon-name="${escapeHtml(icon)}"><svg class="qs-svg-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false" style="width:${size}px;height:${size}px;">${raw}</svg></span>`;
 }
 
-type ButtonRenderOptions = {
-  action?: string;
-  id?: string;
-  tone?: ButtonTone;
-  title?: string;
-};
-
-function renderButton(label: string, icon: string, options: ButtonRenderOptions = {}): string {
+function renderButton(label: string, icon: IconName, options: ButtonRenderOptions = {}): string {
   const { action, id, tone = "default", title } = options;
   const classes = ["qs-btn"];
   if (tone === "danger") classes.push("danger");
@@ -46,11 +37,11 @@ function renderButton(label: string, icon: string, options: ButtonRenderOptions 
   if (id) attrs.push(`id="${id}"`);
   if (title) attrs.push(`title="${escapeHtml(title)}"`);
   const attrString = attrs.length ? ` ${attrs.join(" ")}` : "";
-  const iconHtml = icon ? getIconMarkup(icon) : "";
+  const iconHtml = getIconMarkup(icon);
   return `<button type="button" class="${classes.join(" ")}"${attrString}>${iconHtml}<span class="qs-btn-label">${escapeHtml(label)}</span></button>`;
 }
 
-function renderActionIconButton(action: string, icon: string, title: string): string {
+function renderActionIconButton(action: string, icon: IconName, title: string): string {
   return `<button type="button" class="qs-icon-btn" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
 }
 
@@ -192,6 +183,10 @@ export function openManagerModal(ui: UIHandlers): void {
             <div class="qs-setting" style="margin-top:12px">
               <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled !== false ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} Warn when queue is nearly full</label>
               <div style="opacity:0.7; font-size:12px">Heuristic limit; includes current track. Adjust if needed.</div>
+            </div>
+            <div class="qs-setting" style="margin-top:12px">
+              <label class="qs-checkbox"><input type="checkbox" id="qs-prompt-manual-before-replace" ${s.promptManualBeforeReplace ? "checked" : ""}/> ${getIconMarkup("copy")} Ask to save manual snapshot before replacing queue</label>
+              <div style="opacity:0.7; font-size:12px">Offers to store the current queue before overwriting it.</div>
             </div>
           </div>
           <div class="qs-right">
@@ -379,11 +374,27 @@ export function openManagerModal(ui: UIHandlers): void {
       if (exportingIds.has(id)) return;
       exportingIds.add(id);
       const btn = clickedButton;
-      await replaceQueueWithSnapshot(snap, btn);
-      exportingIds.delete(id);
+      try {
+        const settings = ui.getSettings();
+        if (settings.promptManualBeforeReplace) {
+          const shouldSave = window.confirm("Create a manual snapshot of the current queue before replacing it?");
+          if (shouldSave) {
+            await createManualSnapshot();
+            renderList();
+          }
+        }
+        await replaceQueueWithSnapshot(snap, btn);
+      } finally {
+        exportingIds.delete(id);
+      }
       return;
     }
     if (action === "delete") {
+      const confirmDelete = window.confirm("Delete this snapshot? This cannot be undone.");
+      if (!confirmDelete) {
+        exportingIds.delete(id);
+        return;
+      }
       const remaining = loadSnapshots().filter(s => s.id !== id);
       saveSnapshots(remaining);
       renderList();
@@ -467,6 +478,14 @@ export function openManagerModal(ui: UIHandlers): void {
       const num = parseInt(input.value, 10);
       const value = Number.isFinite(num) && num >= 0 ? num : (s0.queueWarnThreshold ?? 5);
       const newSettings: Settings = { ...s0, queueWarnThreshold: value };
+      ui.setSettings(newSettings);
+      return;
+    }
+    if (target.id === "qs-prompt-manual-before-replace") {
+      const checkbox = target as HTMLInputElement;
+      const promptManualBeforeReplace = !!checkbox.checked;
+      const s0 = ui.getSettings();
+      const newSettings: Settings = { ...s0, promptManualBeforeReplace };
       ui.setSettings(newSettings);
       return;
     }
