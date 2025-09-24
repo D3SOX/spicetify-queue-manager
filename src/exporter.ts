@@ -2,7 +2,7 @@ import { Snapshot } from "./types";
 import { getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { getQueueFromSpicetify } from "./queue";
 import { addSnapshot } from "./storage";
-import { generateId } from "./utils";
+import { generateId, setButtonLabel } from "./utils";
 import { APP_NAME } from "./appInfo";
 
 export async function createManualSnapshot(): Promise<void> {
@@ -44,7 +44,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
 
     if (buttonEl) {
       buttonEl.disabled = true;
-      buttonEl.textContent = "Exporting…";
+      setButtonLabel(buttonEl, "Exporting…");
     }
 
     const me = await Spicetify.CosmosAsync.get("https://api.spotify.com/v1/me");
@@ -113,7 +113,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;
-      buttonEl.textContent = "Export to playlist";
+      setButtonLabel(buttonEl, "Export");
     }
   }
 }
@@ -126,7 +126,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     }
     if (buttonEl) {
       buttonEl.disabled = true;
-      buttonEl.textContent = "Replacing…";
+      setButtonLabel(buttonEl, "Replacing…");
     }
 
     const items = snapshot.items.slice();
@@ -177,7 +177,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;
-      buttonEl.textContent = "Replace queue";
+      setButtonLabel(buttonEl, "Replace queue");
     }
   }
 } 

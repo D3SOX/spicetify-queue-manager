@@ -1,7 +1,7 @@
 import { Snapshot, Settings } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSettings, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
-import { escapeHtml, downloadJson } from "./utils";
+import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
 import { APP_NAME } from "./appInfo";
@@ -17,25 +17,78 @@ let boundClickHandler: ((e: MouseEvent) => void) | null = null;
 let boundChangeHandler: ((e: Event) => void) | null = null;
 const exportingIds = new Set<string>();
 
+const DEFAULT_ICON_SIZE = 16;
+
+type ButtonTone = "primary" | "danger" | "subtle" | "default";
+
+function getIconMarkup(icon: string, size = DEFAULT_ICON_SIZE): string {
+  const iconMap = (Spicetify.SVGIcons ?? {}) as Record<string, string>;
+  const raw = iconMap[icon];
+  if (!raw) return "";
+  return `<span class="qs-btn-icon" data-icon-name="${escapeHtml(icon)}"><svg class="qs-svg-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false" style="width:${size}px;height:${size}px;">${raw}</svg></span>`;
+}
+
+type ButtonRenderOptions = {
+  action?: string;
+  id?: string;
+  tone?: ButtonTone;
+  title?: string;
+};
+
+function renderButton(label: string, icon: string, options: ButtonRenderOptions = {}): string {
+  const { action, id, tone = "default", title } = options;
+  const classes = ["qs-btn"];
+  if (tone === "danger") classes.push("danger");
+  if (tone === "primary") classes.push("primary");
+  if (tone === "subtle") classes.push("subtle");
+  const attrs: string[] = [];
+  if (action) attrs.push(`data-action="${action}"`);
+  if (id) attrs.push(`id="${id}"`);
+  if (title) attrs.push(`title="${escapeHtml(title)}"`);
+  const attrString = attrs.length ? ` ${attrs.join(" ")}` : "";
+  const iconHtml = icon ? getIconMarkup(icon) : "";
+  return `<button type="button" class="${classes.join(" ")}"${attrString}>${iconHtml}<span class="qs-btn-label">${escapeHtml(label)}</span></button>`;
+}
+
+function renderActionIconButton(action: string, icon: string, title: string): string {
+  return `<button type="button" class="qs-icon-btn" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
+}
+
+function renderBadge(text: string, variant: "default" | "accent" = "default"): string {
+  const cls = variant === "accent" ? "qs-pill qs-pill--accent" : "qs-pill";
+  return `<span class="${cls}">${escapeHtml(text)}</span>`;
+}
+
 function generateRowsHTMLFor(list: Snapshot[]): string {
   return list
     .map(s => {
       const label = escapeHtml(getSnapshotDisplayName(s));
       const hasLocal = s.items.some(u => u.startsWith("spotify:local:"));
-      const meta = `${s.items.length} items${hasLocal ? " · includes local" : ""}`;
+      const metaParts = [
+        renderBadge(`${s.items.length} ${s.items.length === 1 ? "item" : "items"}`, "accent"),
+      ];
+      if (hasLocal) {
+        metaParts.push(renderBadge("includes local"));
+      }
+      const meta = metaParts.join("");
       return `
           <div class="qs-row" data-id="${s.id}">
             <div class="qs-row-main">
-              <div class="qs-row-title">${label}</div>
+              <div class="qs-row-title">
+                ${getIconMarkup(s.type === "auto" ? "clock" : "playlist")}
+                <span>${label}</span>
+                <span class="qs-title-actions">
+                  ${renderActionIconButton("rename", "edit", "Rename snapshot")}
+                  ${s.name ? renderActionIconButton("reset-name", "repeat", "Reset name") : ""}
+                </span>
+              </div>
               <div class="qs-row-meta">${meta}</div>
-            </div>
-            <div class="qs-row-actions">
-              <button class="qs-btn" data-action="toggle-items">View items</button>
-              <button class="qs-btn" data-action="replace-queue">Replace queue</button>
-              <button class="qs-btn" data-action="export">Export to playlist</button>
-              <button class="qs-btn" data-action="rename">Rename</button>
-              <button class="qs-btn" data-action="reset-name">Reset name</button>
-              <button class="qs-btn danger" data-action="delete">Delete</button>
+              <div class="qs-row-actions">
+                ${renderButton("View items", "list-view", { action: "toggle-items", title: "Toggle items" })}
+                ${renderButton("Replace queue", "queue", { action: "replace-queue", tone: "primary" })}
+                ${renderButton("Export", "download", { action: "export", title: "Export to playlist" })}
+                ${renderButton("Delete", "minus", { action: "delete", tone: "danger" })}
+              </div>
             </div>
           </div>
           <div class="qs-items" data-id="${s.id}" style="display:none">
@@ -53,24 +106,42 @@ function generateSectionsHTML(): string {
   const autoRows = generateRowsHTMLFor(autos);
   const manualRows = generateRowsHTMLFor(manuals);
   return `
-      <div class="qs-section">
-        <div class="qs-section-title">
-          <span>Manual Snapshots (${manuals.length})</span>
+      <div class="qs-section-card">
+        <div class="qs-section-head">
+          <div class="qs-section-heading">
+            ${getIconMarkup("playlist")}
+            <div class="qs-section-text">
+              <div class="qs-section-name">Manual Snapshots</div>
+              <div class="qs-section-caption">Your saved queues for later</div>
+            </div>
+            ${renderBadge(String(manuals.length), "accent")}
+          </div>
           <div class="qs-actions">
-            <button class="qs-btn" id="qs-export-manuals">Export</button>
-            <button class="qs-btn" id="qs-new-manual">Save now</button>
+            ${renderButton("Export all", "download", { id: "qs-export-manuals", tone: "subtle" })}
+            ${renderButton("Save now", "plus-alt", { id: "qs-new-manual", tone: "primary" })}
           </div>
         </div>
-        ${manualRows || '<div style="opacity:0.7">No manual snapshots yet</div>'}
+        <div class="qs-section-body">
+          ${manualRows || '<div class="qs-empty">No manual snapshots yet</div>'}
+        </div>
       </div>
-      <div class="qs-section">
-        <div class="qs-section-title">
-          <span>Automatic Snapshots (${autos.length})</span>
+      <div class="qs-section-card">
+        <div class="qs-section-head">
+          <div class="qs-section-heading">
+            ${getIconMarkup("clock")}
+            <div class="qs-section-text">
+              <div class="qs-section-name">Automatic Snapshots</div>
+              <div class="qs-section-caption">Captured in the background</div>
+            </div>
+            ${renderBadge(String(autos.length), "accent")}
+          </div>
           <div class="qs-actions">
-            <button class="qs-btn" id="qs-export-autos">Export</button>
+            ${renderButton("Export all", "download", { id: "qs-export-autos", tone: "subtle" })}
           </div>
         </div>
-        ${autoRows || '<div style="opacity:0.7">No automatic snapshots yet</div>'}
+        <div class="qs-section-body">
+          ${autoRows || '<div class="qs-empty">No automatic snapshots yet</div>'}
+        </div>
       </div>
     `;
 }
@@ -82,50 +153,56 @@ export function openManagerModal(ui: UIHandlers): void {
   const body = `
       <div class="qs-container">
         <div class="qs-header">
-          <div style="font-weight:700">Actions and Settings</div>
+          <div class="qs-header-title">
+            <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
+            <div>
+              <div class="qs-header-name">Actions & Settings</div>
+              <div class="qs-header-sub">Manage automatic saves and queue capacity warnings</div>
+            </div>
+          </div>
           <div class="qs-actions">
-            <button class="qs-btn" id="qs-refresh">Refresh</button>
-            <button class="qs-btn" id="qs-export-settings">Export settings</button>
+            ${renderButton("Refresh", "repeat", { id: "qs-refresh", tone: "subtle" })}
+            ${renderButton("Export settings", "download", { id: "qs-export-settings" })}
           </div>
         </div>
         <div class="qs-settings">
           <div class="qs-setting">
-            <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots</label>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots</label>
             <div class="qs-dim">Mode 
               <div class="qs-radio-group" id="qs-auto-mode-group">
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>Time-based</span></label>
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental</span>: this mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} Time-based</span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental</span>: this mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
               </div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> Check for new items</label>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> ${getIconMarkup("search")} Check for new items</label>
               <div style="opacity:0.7; font-size:12px">Only trigger it when there is a new song that was not in the previous snapshot.</div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
               <div style="opacity:0.7; font-size:12px">Equal queues are never saved as automatic snapshots.</div>
             </div>
             <div class="qs-setting" style="margin-top:12px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled !== false ? "checked" : ""}/> Warn when queue is nearly full</label>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled !== false ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} Warn when queue is nearly full</label>
               <div style="opacity:0.7; font-size:12px">Heuristic limit; includes current track. Adjust if needed.</div>
             </div>
           </div>
           <div class="qs-right">
             <div class="qs-setting">
-              <label>Interval (minutes)</label>
+              <label>${getIconMarkup("clock")} Interval (minutes)</label>
               <input class="qs-input" type="number" id="qs-auto-interval-mins" min="0.5" step="0.5" value="${(s.autoIntervalMs / 60000).toFixed(2)}" ${s.autoEnabled && s.autoMode === "timer" ? "" : "disabled"} />
               <div style="opacity:0.7; font-size:12px">Minimum 0.5 (30 seconds)</div>
             </div>
             <div class="qs-setting">
-              <label>Max automatic snapshots</label>
+              <label>${getIconMarkup("chart-up")} Max automatic snapshots</label>
               <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
               <div style="opacity:0.7; font-size:12px">Older snapshots are pruned</div>
             </div>
             <div class="qs-setting">
-              <label>Queue max size</label>
+              <label>${getIconMarkup("queue")} Queue max size</label>
               <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize ?? 80}" ${s.queueWarnEnabled !== false ? "" : "disabled"} />
             </div>
             <div class="qs-setting">
-              <label>Warn when remaining slots ≤</label>
+              <label>${getIconMarkup("exclamation-circle")} Warn when remaining slots ≤</label>
               <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold ?? 5}" ${s.queueWarnEnabled !== false ? "" : "disabled"} />
             </div>
           </div>
@@ -177,86 +254,49 @@ export function openManagerModal(ui: UIHandlers): void {
     if (!modalRoot) return;
     if (!target) return;
 
-    if (target.id === "qs-new-manual") {
+    const clickedButton = target.closest<HTMLButtonElement>(".qs-btn, .qs-icon-btn");
+
+    if (clickedButton?.id === "qs-new-manual") {
       e.preventDefault();
       await createManualSnapshot();
       renderList();
       return;
     }
-    if (target.id === "qs-export-settings") {
+    if (clickedButton?.id === "qs-export-settings") {
       e.preventDefault();
       const settings = ui.getSettings();
       return await downloadJson(`${APP_NAME}-settings.json`, settings);
     }
-    if (target.id === "qs-export-manuals") {
+    if (clickedButton?.id === "qs-export-manuals") {
       e.preventDefault();
       const data = loadSnapshots().filter(s => s.type === "manual");
       return await downloadJson(`${APP_NAME}-manual-snapshots.json`, data);
     }
-    if (target.id === "qs-export-autos") {
+    if (clickedButton?.id === "qs-export-autos") {
       e.preventDefault();
       const data = loadSnapshots().filter(s => s.type === "auto");
       return await downloadJson(`${APP_NAME}-auto-snapshots.json`, data);
     }
-    if (target.id === "qs-refresh") {
+    if (clickedButton?.id === "qs-refresh") {
       e.preventDefault();
       renderList();
       return;
     }
-    if (target.matches(".qs-btn")) {
-      const rowEl = target.closest(".qs-row") as HTMLElement | null;
-      const action = target.getAttribute("data-action");
-      if (!rowEl || !action) return;
-      const id = rowEl.getAttribute("data-id");
-      if (!id) return;
-      const snap = loadSnapshots().find(s => s.id === id);
-      if (!snap) return;
 
-      if (action === "toggle-items") {
-        e.preventDefault();
-        const itemsEl = rowEl.nextElementSibling as HTMLElement | null;
-        const btn = target as HTMLButtonElement;
-        if (!itemsEl || !itemsEl.classList.contains("qs-items")) return;
-        const isHidden = itemsEl.style.display === "none" || !itemsEl.style.display;
-        if (isHidden) {
-          itemsEl.style.display = "block";
-          btn.textContent = "Hide items";
-          const bodyEl = itemsEl.querySelector(".qs-items-body") as HTMLElement | null;
-          if (bodyEl) {
-            bodyEl.textContent = "Loading…";
-            try {
-              const names = await getSnapshotItemNames(snap);
-              bodyEl.innerHTML = names
-                .map((n, i) => `<div>${i + 1}. ${escapeHtml(n)}</div>`)
-                .join("");
-            } catch (err) {
-              bodyEl.textContent = "Failed to load items";
-            }
-          }
-        } else {
-          itemsEl.style.display = "none";
-          btn.textContent = "View items";
-        }
-        return;
-      }
+    if (!clickedButton) return;
 
-      if (action === "export") {
-        if (exportingIds.has(id)) return;
-        exportingIds.add(id);
-        const btn = target as HTMLButtonElement;
-        await exportSnapshotToPlaylist(snap, btn);
-        exportingIds.delete(id);
-        return;
-      }
-      if (action === "replace-queue") {
-        if (exportingIds.has(id)) return;
-        exportingIds.add(id);
-        const btn = target as HTMLButtonElement;
-        await replaceQueueWithSnapshot(snap, btn);
-        exportingIds.delete(id);
-        return;
-      }
-      if (action === "rename") {
+    const rowEl = clickedButton.closest<HTMLElement>(".qs-row");
+    const actionAttr = clickedButton.getAttribute("data-action") ?? undefined;
+    const isRowAction = clickedButton.classList.contains("qs-icon-btn");
+
+    if (!rowEl || (!actionAttr && isRowAction)) return;
+    const id = rowEl.getAttribute("data-id");
+    if (!id) return;
+    const snap = loadSnapshots().find(s => s.id === id);
+    if (!snap) return;
+
+    if (isRowAction) {
+      if (actionAttr === "rename") {
         e.preventDefault();
         const input = prompt("Enter a new name.", getSnapshotDisplayName(snap));
         if (input === null) return;
@@ -274,7 +314,7 @@ export function openManagerModal(ui: UIHandlers): void {
         }
         return;
       }
-      if (action === "reset-name") {
+      if (actionAttr === "reset-name") {
         e.preventDefault();
         const snapshots = loadSnapshots();
         const idx = snapshots.findIndex(s => s.id === id);
@@ -285,12 +325,61 @@ export function openManagerModal(ui: UIHandlers): void {
         }
         return;
       }
-      if (action === "delete") {
-        const remaining = loadSnapshots().filter(s => s.id !== id);
-        saveSnapshots(remaining);
-        renderList();
-        return;
+      return;
+    }
+
+    const action = actionAttr;
+    if (!action) return;
+
+    if (action === "toggle-items") {
+      e.preventDefault();
+      const itemsEl = rowEl.nextElementSibling as HTMLElement | null;
+      const btn = clickedButton;
+      if (!itemsEl || !itemsEl.classList.contains("qs-items")) return;
+      const isHidden = itemsEl.style.display === "none" || !itemsEl.style.display;
+      if (isHidden) {
+        itemsEl.style.display = "block";
+        setButtonLabel(btn, "Hide items");
+        const bodyEl = itemsEl.querySelector(".qs-items-body") as HTMLElement | null;
+        if (bodyEl) {
+          bodyEl.textContent = "Loading…";
+          try {
+            const names = await getSnapshotItemNames(snap);
+            bodyEl.innerHTML = names
+              .map((n, i) => `<div>${i + 1}. ${escapeHtml(n)}</div>`)
+              .join("");
+          } catch (err) {
+            bodyEl.textContent = "Failed to load items";
+          }
+        }
+      } else {
+        itemsEl.style.display = "none";
+        setButtonLabel(btn, "View items");
       }
+      return;
+    }
+
+    if (action === "export") {
+      if (exportingIds.has(id)) return;
+      exportingIds.add(id);
+      const btn = clickedButton;
+      await exportSnapshotToPlaylist(snap, btn);
+      exportingIds.delete(id);
+      return;
+    }
+    if (action === "replace-queue") {
+      if (exportingIds.has(id)) return;
+      exportingIds.add(id);
+      const btn = clickedButton;
+      await replaceQueueWithSnapshot(snap, btn);
+      exportingIds.delete(id);
+      return;
+    }
+    if (action === "delete") {
+      const remaining = loadSnapshots().filter(s => s.id !== id);
+      saveSnapshots(remaining);
+      renderList();
+      return;
     }
   };
 

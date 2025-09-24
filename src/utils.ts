@@ -17,6 +17,15 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
+export function setButtonLabel(button: HTMLButtonElement, label: string): void {
+  const span = button.querySelector<HTMLElement>(".qs-btn-label");
+  if (span) {
+    span.textContent = label;
+  } else {
+    button.textContent = label;
+  }
+}
+
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
