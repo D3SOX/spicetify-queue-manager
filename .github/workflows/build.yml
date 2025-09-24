@@ -30,11 +30,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build extension
-        run: pnpm build
+        run: pnpm build-local
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
-          name: queue-manager-dist
+          name: spicetify-queue-manager
           path: dist
 
