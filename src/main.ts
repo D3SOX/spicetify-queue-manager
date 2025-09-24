@@ -1,7 +1,7 @@
 import { Settings } from "./types";
 import { loadSettings, saveSettings } from "./storage";
 import { openManagerModal, UIHandlers } from "./ui";
-import { createAutoManager } from "./auto";
+import { createAutoManager, createQueueCapacityWatcher } from "./auto";
 import { APP_NAME } from "./appInfo";
 
 async function main() {
@@ -15,12 +15,18 @@ async function main() {
   autoMgr.primeFromExisting();
   autoMgr.applyAutoMode(settings);
 
+  // Start capacity watcher independently of auto snapshots
+  const capacityWatcher = createQueueCapacityWatcher(() => settings);
+  capacityWatcher.start();
+
   const uiHandlers: UIHandlers = {
     getSettings: () => settings,
     setSettings: (s: Settings) => {
       settings = s;
       saveSettings(s);
       autoMgr.applyAutoMode(s);
+      // If user toggles warning settings, trigger a fresh check
+      capacityWatcher.checkAndWarnOnce();
     },
   };
 

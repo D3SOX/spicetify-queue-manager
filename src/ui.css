@@ -40,6 +40,11 @@
   font-size: 12px;
   opacity: 0.8;
 }
+.qs-dim {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
 .qs-row {
   display: flex;
   justify-content: space-between;
@@ -123,6 +128,52 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
+}
+.qs-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 16px;
+  margin-left: 2px;
+}
+.qs-icon {
+  position: relative;
+}
+.qs-icon-glyph {
+  opacity: 0.7;
+  transition: opacity 0.12s ease-in-out;
+}
+.qs-icon:hover .qs-icon-glyph {
+  opacity: 1;
+}
+.qs-icon > .qs-tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 6px);
+  white-space: nowrap;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  color: var(--spice-text, #fff);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease-in-out;
+  z-index: 9999;
+}
+.qs-icon:hover > .qs-tooltip {
+  opacity: 1;
+}
+.qs-tooltip .qs-tooltip-emph {
+  color: #ff4e4e;
 }
 .qs-radio:disabled {
   cursor: not-allowed;

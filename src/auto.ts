@@ -143,3 +143,75 @@ export function createAutoManager(getSettings: () => Settings) {
 
   return { startAutoTimer, primeFromExisting, applyAutoMode };
 } 
+
+// Lightweight watcher that warns when the queue is nearly full.
+export function createQueueCapacityWatcher(getSettings: () => Settings) {
+  let unsubscribe: (() => void) | null = null;
+  let lastWarnRemaining: number | null = null;
+  let lastWarnAt = 0;
+  const warnCooldownMs = 30000; // 30s cooldown to avoid spam
+
+  async function checkAndWarnOnce(): Promise<void> {
+    try {
+      const s = getSettings();
+      if (!s.queueWarnEnabled) return;
+      const maxSize = s.queueMaxSize ?? 80;
+      const threshold = s.queueWarnThreshold ?? 5;
+      if (threshold < 0 || maxSize <= 1) return;
+
+      const items = await getQueueFromSpicetify();
+      if (!items.length) return;
+      const remaining = Math.max(0, maxSize - items.length);
+      if (remaining <= threshold) {
+        const now = Date.now();
+        if (lastWarnRemaining !== remaining || now - lastWarnAt >= warnCooldownMs) {
+          const used = maxSize - remaining;
+          Spicetify.showNotification(`${APP_NAME}: Queue nearly full (${used}/${maxSize})`, false, 2500);
+          lastWarnRemaining = remaining;
+          lastWarnAt = now;
+        }
+      }
+    } catch (e) {
+      console.warn(`${APP_NAME}: queue capacity check failed`, e);
+    }
+  }
+
+  function stop(): void {
+    if (unsubscribe) {
+      try { unsubscribe(); } catch {}
+      unsubscribe = null;
+    }
+  }
+
+  function start(): void {
+    stop();
+    try {
+      type EventFunc = (event: string, callback: (...args: any[]) => void) => void;
+      const events: {
+        addListener?: EventFunc;
+        removeListener: EventFunc;
+      } | undefined = (Spicetify as any)?.Player?.origin?._events;
+      if (!events?.addListener || !events?.removeListener) {
+        throw new Error("queue_update events API not available");
+      }
+
+      const onQueueUpdate = (_evt: QueueUpdateEvent) => {
+        checkAndWarnOnce();
+      };
+      events.addListener("queue_update", onQueueUpdate);
+      unsubscribe = () => {
+        try { events.removeListener("queue_update", onQueueUpdate); } catch (e) {
+          console.error(`${APP_NAME}: failed to remove queue_update listener (capacity watcher)`, e);
+        }
+      };
+
+      // Initial check on startup
+      checkAndWarnOnce();
+    } catch (e) {
+      console.error(`${APP_NAME}: failed to start capacity watcher`, e);
+      Spicetify.showNotification(`${APP_NAME}: failed to start capacity watcher`);
+    }
+  }
+
+  return { start, stop, checkAndWarnOnce };
+}

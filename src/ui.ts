@@ -90,12 +90,11 @@ export function openManagerModal(ui: UIHandlers): void {
         </div>
         <div class="qs-settings">
           <div class="qs-setting">
-            <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots <span style="opacity:0.8">(experimental)</span></label>
-            <div style="color:#b45309; font-size:12px; margin-top:4px">This feature is experimental and may trigger many snapshots. Use with caution.</div>
-            <div style="opacity:0.7; font-size:12px">Mode 
+            <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> Enable automatic snapshots</label>
+            <div class="qs-dim">Mode 
               <div class="qs-radio-group" id="qs-auto-mode-group">
                 <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>Time-based</span></label>
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>Queue changes</span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental</span>: this mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
               </div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
@@ -104,6 +103,10 @@ export function openManagerModal(ui: UIHandlers): void {
             </div>
             <div class="qs-setting" style="margin-top:6px">
               <div style="opacity:0.7; font-size:12px">Equal queues are never saved as automatic snapshots.</div>
+            </div>
+            <div class="qs-setting" style="margin-top:12px">
+              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled !== false ? "checked" : ""}/> Warn when queue is nearly full</label>
+              <div style="opacity:0.7; font-size:12px">Heuristic limit; includes current track. Adjust if needed.</div>
             </div>
           </div>
           <div class="qs-right">
@@ -116,6 +119,14 @@ export function openManagerModal(ui: UIHandlers): void {
               <label>Max automatic snapshots</label>
               <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
               <div style="opacity:0.7; font-size:12px">Older snapshots are pruned</div>
+            </div>
+            <div class="qs-setting">
+              <label>Queue max size</label>
+              <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize ?? 80}" ${s.queueWarnEnabled !== false ? "" : "disabled"} />
+            </div>
+            <div class="qs-setting">
+              <label>Warn when remaining slots ≤</label>
+              <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold ?? 5}" ${s.queueWarnEnabled !== false ? "" : "disabled"} />
             </div>
           </div>
         </div>
@@ -146,10 +157,15 @@ export function openManagerModal(ui: UIHandlers): void {
     const intervalInput = document.querySelector<HTMLInputElement>("#qs-auto-interval-mins");
     const chkOnlyNew = document.querySelector<HTMLInputElement>("#qs-only-new");
     const maxAutosInput = document.querySelector<HTMLInputElement>("#qs-max-autos");
+    const queueMaxSizeInput = document.querySelector<HTMLInputElement>("#qs-queue-max-size");
+    const queueWarnThresholdInput = document.querySelector<HTMLInputElement>("#qs-queue-warn-threshold");
     radios.forEach(r => { r.disabled = !st.autoEnabled; });
     if (intervalInput) intervalInput.disabled = !(st.autoEnabled && st.autoMode === "timer");
     if (chkOnlyNew) chkOnlyNew.disabled = !st.autoEnabled;
     if (maxAutosInput) maxAutosInput.disabled = !st.autoEnabled;
+    const warnEnabled = st.queueWarnEnabled !== false;
+    if (queueMaxSizeInput) queueMaxSizeInput.disabled = !warnEnabled;
+    if (queueWarnThresholdInput) queueWarnThresholdInput.disabled = !warnEnabled;
   }
 
   boundClickHandler = async function clickHandler(e: MouseEvent) {
@@ -328,6 +344,33 @@ export function openManagerModal(ui: UIHandlers): void {
       ui.setSettings(newSettings);
       pruneAutosToMax(newSettings);
       renderList();
+      return;
+    }
+    if (target.id === "qs-queue-warn-enabled") {
+      const checkbox = target as HTMLInputElement;
+      const queueWarnEnabled = !!checkbox.checked;
+      const s0 = ui.getSettings();
+      const newSettings: Settings = { ...s0, queueWarnEnabled };
+      ui.setSettings(newSettings);
+      applyControlDisabledStates();
+      return;
+    }
+    if (target.id === "qs-queue-max-size") {
+      const input = target as HTMLInputElement;
+      const s0 = ui.getSettings();
+      const num = parseInt(input.value, 10);
+      const value = Number.isFinite(num) && num > 1 ? num : (s0.queueMaxSize ?? 80);
+      const newSettings: Settings = { ...s0, queueMaxSize: value };
+      ui.setSettings(newSettings);
+      return;
+    }
+    if (target.id === "qs-queue-warn-threshold") {
+      const input = target as HTMLInputElement;
+      const s0 = ui.getSettings();
+      const num = parseInt(input.value, 10);
+      const value = Number.isFinite(num) && num >= 0 ? num : (s0.queueWarnThreshold ?? 5);
+      const newSettings: Settings = { ...s0, queueWarnThreshold: value };
+      ui.setSettings(newSettings);
       return;
     }
   };

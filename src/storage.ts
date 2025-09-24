@@ -7,6 +7,11 @@ const DEFAULT_SETTINGS: Settings = {
   maxAutosnapshots: 20,
   autoMode: "timer",
   onlyNewItems: true,
+  queueWarnEnabled: true,
+  // Heuristic: anecdotal reports suggest ~80 items. Includes current track + queued
+  queueMaxSize: 80,
+  // Warn when 5 or fewer slots remain
+  queueWarnThreshold: 5,
 };
 
 export function loadSettings(): Settings {
@@ -21,6 +26,9 @@ export function loadSettings(): Settings {
       maxAutosnapshots: typeof parsed.maxAutosnapshots === "number" && parsed.maxAutosnapshots > 0 ? parsed.maxAutosnapshots : DEFAULT_SETTINGS.maxAutosnapshots,
       autoMode: parsed.autoMode === "timer" ? "timer" : "on-change",
       onlyNewItems: parsed.onlyNewItems !== false,
+      queueWarnEnabled: parsed.queueWarnEnabled !== false,
+      queueMaxSize: typeof parsed.queueMaxSize === "number" && parsed.queueMaxSize > 1 ? parsed.queueMaxSize : DEFAULT_SETTINGS.queueMaxSize,
+      queueWarnThreshold: typeof parsed.queueWarnThreshold === "number" && parsed.queueWarnThreshold >= 0 ? parsed.queueWarnThreshold : DEFAULT_SETTINGS.queueWarnThreshold,
     };
     return s;
   } catch {
