@@ -11,3 +11,8 @@ This documents the user-facing changes for each version
 
 - Inline name editing
 - Prettier custom dialogs for confirmation and prompt
+
+## 0.3
+
+- Add prompt for manual snapshot before queue replacement and deletions
+- Small UI improvements
