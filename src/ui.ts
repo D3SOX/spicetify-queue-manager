@@ -9,7 +9,7 @@ import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
-import { showConfirmDialog } from "./dialogs";
+import { showConfirmDialog, ConfirmDialogResult } from "./dialogs";
 
 export type UIHandlers = {
   getSettings: () => Settings;
@@ -19,7 +19,6 @@ export type UIHandlers = {
 let boundClickHandler: ((e: MouseEvent) => void) | null = null;
 let boundChangeHandler: ((e: Event) => void) | null = null;
 const exportingIds = new Set<string>();
-let notificationWatcher: number | null = null;
 
 type InlineEditState = {
   input: HTMLInputElement;
@@ -504,9 +503,14 @@ export function openManagerModal(ui: UIHandlers): void {
             message: "Create a manual snapshot of the current queue before replacing it?",
             confirmLabel: "Save snapshot",
             cancelLabel: "Skip",
+            extraLabel: "Cancel",
+            extraTone: "subtle",
             tone: "primary",
           });
-          if (shouldSave) {
+          if (shouldSave === "extra") {
+            return;
+          }
+          if (shouldSave === "confirm") {
             await createManualSnapshot();
             renderList();
           }
@@ -518,16 +522,13 @@ export function openManagerModal(ui: UIHandlers): void {
       return;
     }
     if (action === "delete") {
-      const confirmDelete = await showConfirmDialog({
+      const confirmDelete: ConfirmDialogResult = await showConfirmDialog({
         title: "Delete snapshot",
         message: "Delete this snapshot? This cannot be undone.",
         confirmLabel: "Delete",
         tone: "danger",
       });
-      if (!confirmDelete) {
-        exportingIds.delete(id);
-        return;
-      }
+      if (confirmDelete !== "confirm") return;
       const snapshotName = getSnapshotDisplayName(snap);
       const remaining = snapshots.filter(s => s.id !== id);
       saveSnapshots(remaining);

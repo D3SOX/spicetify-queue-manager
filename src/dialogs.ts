@@ -6,6 +6,8 @@ type ConfirmDialogOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: ButtonTone;
+  extraLabel?: string;
+  extraTone?: ButtonTone;
 };
 
 type PromptDialogOptions = {
@@ -38,10 +40,12 @@ function createDialogContainer(backdrop: HTMLDivElement): HTMLDivElement {
   return dialog;
 }
 
-export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
-  if (dialogOpen) return Promise.resolve(false);
+type ConfirmDialogResult = "confirm" | "cancel" | "extra";
+
+export function showConfirmDialog(options: ConfirmDialogOptions): Promise<ConfirmDialogResult> {
+  if (dialogOpen) return Promise.resolve("cancel");
   dialogOpen = true;
-  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone } = options;
+  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone, extraLabel, extraTone } = options;
 
   return new Promise(resolve => {
     const backdrop = createBackdrop();
@@ -76,13 +80,29 @@ export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolea
     confirmBtn.className = confirmClasses.join(" ");
     confirmBtn.textContent = confirmLabel;
 
-    actionsEl.append(cancelBtn, confirmBtn);
+    let extraBtn: HTMLButtonElement | null = null;
+    if (extraLabel) {
+      extraBtn = document.createElement("button");
+      extraBtn.type = "button";
+      const extraToneClass = getToneClass(extraTone);
+      const extraClasses = ["qs-btn"];
+      if (extraToneClass === "default") extraClasses.push("subtle");
+      else extraClasses.push(extraToneClass);
+      extraBtn.className = extraClasses.join(" ");
+      extraBtn.textContent = extraLabel;
+    }
+
+    if (extraBtn) {
+      actionsEl.append(cancelBtn, extraBtn, confirmBtn);
+    } else {
+      actionsEl.append(cancelBtn, confirmBtn);
+    }
     dialog.appendChild(actionsEl);
 
     const prevFocused = document.activeElement as HTMLElement | null;
     let resolved = false;
 
-    function cleanup(result: boolean) {
+    function cleanup(result: ConfirmDialogResult) {
       if (resolved) return;
       resolved = true;
       backdrop.remove();
@@ -95,17 +115,20 @@ export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolea
     function onKeyDown(ev: KeyboardEvent) {
       if (ev.key === "Escape") {
         ev.preventDefault();
-        cleanup(false);
+        cleanup("cancel");
       } else if (ev.key === "Enter" && document.activeElement === confirmBtn) {
         ev.preventDefault();
-        cleanup(true);
+        cleanup("confirm");
       }
     }
 
-    cancelBtn.addEventListener("click", () => cleanup(false));
-    confirmBtn.addEventListener("click", () => cleanup(true));
+    cancelBtn.addEventListener("click", () => cleanup("cancel"));
+    confirmBtn.addEventListener("click", () => cleanup("confirm"));
+    if (extraBtn) {
+      extraBtn.addEventListener("click", () => cleanup("extra"));
+    }
     backdrop.addEventListener("click", ev => {
-      if (ev.target === backdrop) cleanup(false);
+      if (ev.target === backdrop) cleanup("cancel");
     });
     document.addEventListener("keydown", onKeyDown, true);
 
@@ -219,5 +242,5 @@ export function showPromptDialog(options: PromptDialogOptions): Promise<string |
   });
 }
 
-export type { ConfirmDialogOptions, PromptDialogOptions };
+export type { ConfirmDialogOptions, ConfirmDialogResult, PromptDialogOptions };
 
