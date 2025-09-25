@@ -2,12 +2,13 @@ import "./ui.css";
 
 import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSnapshots } from "./storage";
-import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
+import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
+import { showConfirmDialog } from "./dialogs";
 
 export type UIHandlers = {
   getSettings: () => Settings;
@@ -17,6 +18,129 @@ export type UIHandlers = {
 let boundClickHandler: ((e: MouseEvent) => void) | null = null;
 let boundChangeHandler: ((e: Event) => void) | null = null;
 const exportingIds = new Set<string>();
+let notificationWatcher: number | null = null;
+
+type InlineEditState = {
+  input: HTMLInputElement;
+  labelEl: HTMLElement;
+  originalLabel: string;
+  actionsEl?: HTMLElement;
+  originalActionsDisplay?: string;
+  generatedName: string;
+  onKeyDown: (e: KeyboardEvent) => void;
+  onBlur: () => void;
+};
+
+const inlineEditors = new Map<string, InlineEditState>();
+
+function closeAllInlineEditors(exceptId?: string) {
+  Array.from(inlineEditors.keys()).forEach(id => {
+    if (id !== exceptId) {
+      cleanupInlineRename(id);
+    }
+  });
+}
+
+function cleanupInlineRename(id: string) {
+  const state = inlineEditors.get(id);
+  if (!state) return;
+  state.input.removeEventListener("keydown", state.onKeyDown);
+  state.input.removeEventListener("blur", state.onBlur);
+  if (state.input.isConnected) state.input.remove();
+  state.labelEl.style.display = "";
+  state.labelEl.textContent = state.originalLabel;
+  if (state.actionsEl) state.actionsEl.style.display = state.originalActionsDisplay ?? "";
+  inlineEditors.delete(id);
+}
+
+function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
+  if (!rowEl.isConnected) return;
+  const id = snapshot.id;
+  if (inlineEditors.has(id)) {
+    const existing = inlineEditors.get(id);
+    if (existing) {
+      existing.input.focus();
+      existing.input.select();
+    }
+    return;
+  }
+  const titleEl = rowEl.querySelector<HTMLElement>(".qs-row-title");
+  if (!titleEl) return;
+  const textSpan = Array.from(titleEl.querySelectorAll<HTMLElement>("span"))[1];
+  if (!textSpan) return;
+  const actionsEl = titleEl.querySelector<HTMLElement>(".qs-title-actions") ?? undefined;
+  const originalLabel = textSpan.textContent ?? "";
+  const generatedName = getSnapshotGeneratedNameFor(snapshot);
+  const originalActionsDisplay = actionsEl?.style.display ?? "";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = snapshot.name ?? originalLabel;
+  input.className = "qs-inline-input";
+  input.setAttribute("aria-label", "Snapshot name");
+  textSpan.style.display = "none";
+  if (actionsEl) {
+    actionsEl.style.display = "none";
+  }
+  titleEl.insertBefore(input, actionsEl ?? null);
+
+  const onCommit = (save: boolean) => {
+    const state = inlineEditors.get(id);
+    if (!state) return;
+    cleanupInlineRename(id);
+    if (save) {
+      const newValue = state.input.value.trim();
+      if (!newValue) {
+        Spicetify.showNotification("Name cannot be empty", true, 2000);
+        beginInlineRename(rowEl, snapshot);
+        return;
+      }
+      const originalTrimmed = state.originalLabel.trim();
+      if (newValue === originalTrimmed) {
+        return;
+      }
+      if (newValue === state.generatedName) {
+        Spicetify.showNotification("Name must differ from the default suggestion", true, 2000);
+        return;
+      }
+      const snapshots = loadSnapshots();
+      const idx = snapshots.findIndex(s => s.id === id);
+      if (idx >= 0) {
+        snapshots[idx].name = newValue;
+        saveSnapshots(snapshots);
+        renderList();
+      }
+    }
+  };
+
+  const state: InlineEditState = {
+    input,
+    labelEl: textSpan,
+    originalLabel,
+    actionsEl ,
+    originalActionsDisplay,
+    generatedName,
+    onKeyDown(ev) {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        onCommit(true);
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        onCommit(false);
+      }
+    },
+    onBlur() {
+      onCommit(true);
+    },
+  };
+
+  inlineEditors.set(id, state);
+  input.addEventListener("keydown", state.onKeyDown);
+  input.addEventListener("blur", state.onBlur);
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 0);
+}
 
 const DEFAULT_ICON_SIZE = 16;
 
@@ -85,9 +209,9 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
               <div class="qs-row-meta">${meta}</div>
               <div class="qs-row-actions">
                 ${renderButton("View items", "list-view", { action: "toggle-items", title: "Toggle items" })}
-                ${renderButton("Replace queue", "queue", { action: "replace-queue", tone: "primary" })}
+                ${renderButton("Replace queue", "queue", { action: "replace-queue", title: "Replace queue", tone: "primary" })}
                 ${renderButton("Export", "download", { action: "export", title: "Export to playlist" })}
-                ${renderButton("Delete", "minus", { action: "delete", tone: "danger" })}
+                ${renderButton("Delete", "minus", { action: "delete", title: "Delete snapshot", tone: "danger" })}
               </div>
             </div>
           </div>
@@ -270,6 +394,7 @@ export function openManagerModal(ui: UIHandlers): void {
 
     if (clickedButton?.id === "qs-new-manual") {
       e.preventDefault();
+      closeAllInlineEditors();
       await createManualSnapshot();
       renderList();
       return;
@@ -304,26 +429,16 @@ export function openManagerModal(ui: UIHandlers): void {
     if (!rowEl || (!actionAttr && isRowAction)) return;
     const id = rowEl.getAttribute("data-id");
     if (!id) return;
+    if (!inlineEditors.has(id)) {
+      closeAllInlineEditors(id);
+    }
     const snap = loadSnapshots().find(s => s.id === id);
     if (!snap) return;
 
     if (isRowAction) {
       if (actionAttr === "rename") {
         e.preventDefault();
-        const input = prompt("Enter a new name.", getSnapshotDisplayName(snap));
-        if (input === null) return;
-        const newName = input.trim();
-        if (newName.length === 0) {
-          Spicetify.showNotification("Name cannot be empty", true, 2000);
-          return;
-        }
-        const snapshots = loadSnapshots();
-        const idx = snapshots.findIndex(s => s.id === id);
-        if (idx >= 0) {
-          snapshots[idx].name = newName;
-          saveSnapshots(snapshots);
-          renderList();
-        }
+        beginInlineRename(rowEl, snap);
         return;
       }
       if (actionAttr === "reset-name") {
@@ -382,7 +497,13 @@ export function openManagerModal(ui: UIHandlers): void {
       try {
         const settings = ui.getSettings();
         if (settings.promptManualBeforeReplace) {
-          const shouldSave = window.confirm("Create a manual snapshot of the current queue before replacing it?");
+          const shouldSave = await showConfirmDialog({
+            title: "Save current queue?",
+            message: "Create a manual snapshot of the current queue before replacing it?",
+            confirmLabel: "Save snapshot",
+            cancelLabel: "Skip",
+            tone: "primary",
+          });
           if (shouldSave) {
             await createManualSnapshot();
             renderList();
@@ -395,7 +516,12 @@ export function openManagerModal(ui: UIHandlers): void {
       return;
     }
     if (action === "delete") {
-      const confirmDelete = window.confirm("Delete this snapshot? This cannot be undone.");
+      const confirmDelete = await showConfirmDialog({
+        title: "Delete snapshot",
+        message: "Delete this snapshot? This cannot be undone.",
+        confirmLabel: "Delete",
+        tone: "danger",
+      });
       if (!confirmDelete) {
         exportingIds.delete(id);
         return;
@@ -419,6 +545,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const s0 = ui.getSettings();
       const newSettings = { ...s0, autoEnabled };
       ui.setSettings(newSettings);
+      closeAllInlineEditors();
       applyControlDisabledStates();
       return;
     }
@@ -503,6 +630,7 @@ export function openManagerModal(ui: UIHandlers): void {
 }
 
 export function renderList(): void {
+  closeAllInlineEditors();
   const listEl = document.getElementById("qs-list");
   if (listEl) {
     const sections = generateSectionsHTML();

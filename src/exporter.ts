@@ -4,6 +4,7 @@ import { getQueueFromSpicetify } from "./queue";
 import { addSnapshot } from "./storage";
 import { generateId, setButtonLabel } from "./utils";
 import { APP_NAME } from "./appInfo";
+import { showPromptDialog } from "./dialogs";
 
 export async function createManualSnapshot(): Promise<void> {
   try {
@@ -12,11 +13,20 @@ export async function createManualSnapshot(): Promise<void> {
       Spicetify.showNotification(`${APP_NAME}: No queue found. If you believe this is an error, please try to play and pause a track.`);
       return;
     }
-    const defaultName = getSnapshotGeneratedNameFor({type: "manual", createdAt: Date.now()});
-    const name = window.prompt?.("Name this snapshot:", defaultName);
+    const defaultName = getSnapshotGeneratedNameFor({ type: "manual", createdAt: Date.now() });
+    const name = (await showPromptDialog({
+      title: "Save snapshot",
+      message: "Name this snapshot",
+      confirmLabel: "Save",
+      cancelLabel: "Cancel",
+      defaultValue: defaultName,
+    }))?.trim() ?? null;
 
-    if (!name) {
-      Spicetify.showNotification(`${APP_NAME}: Snapshot not saved (no name provided)`);
+    if (name === null) {
+      // canceled
+      return;
+    } else if (name === '') {
+      Spicetify.showNotification(`${APP_NAME}: Snapshot not saved (name cannot be empty)`);
       return;
     }
 

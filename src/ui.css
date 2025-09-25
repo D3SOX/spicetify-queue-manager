@@ -342,6 +342,24 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+.qs-inline-input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.45);
+  color: inherit;
+  font-size: 14px;
+  width: 100%;
+  max-width: 240px;
+}
+.qs-dialog-input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font-size: 14px;
+}
 .qs-items {
   margin: 10px 0 14px 0;
   padding: 12px;
@@ -377,6 +395,42 @@
 }
 .qs-pill--channel {
   background: rgba(248, 113, 113, 0.35);
+}
+.qs-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+.qs-confirm-dialog {
+  background: var(--spice-section-bg, rgba(32, 32, 32, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px 22px;
+  max-width: 360px;
+  width: min(90vw, 360px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.qs-confirm-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.qs-confirm-message {
+  font-size: 13px;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+.qs-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 @media (max-width: 860px) {
