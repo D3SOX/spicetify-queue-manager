@@ -28,7 +28,7 @@ export function loadSettings(): Settings {
       queueWarnEnabled: parsed.queueWarnEnabled !== false,
       queueMaxSize: typeof parsed.queueMaxSize === "number" && parsed.queueMaxSize > 1 ? parsed.queueMaxSize : DEFAULT_SETTINGS.queueMaxSize,
       queueWarnThreshold: typeof parsed.queueWarnThreshold === "number" && parsed.queueWarnThreshold >= 0 ? parsed.queueWarnThreshold : DEFAULT_SETTINGS.queueWarnThreshold,
-      promptManualBeforeReplace: parsed.promptManualBeforeReplace === true,
+      promptManualBeforeReplace: parsed.promptManualBeforeReplace !== false,
     };
     return s;
   } catch {

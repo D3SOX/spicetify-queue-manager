@@ -16,10 +16,10 @@ export type Settings = {
   maxAutosnapshots: number;
   autoMode: AutoMode;
   onlyNewItems: boolean;
-  queueWarnEnabled?: boolean;
-  queueMaxSize?: number;
-  queueWarnThreshold?: number;
-  promptManualBeforeReplace?: boolean;
+  queueWarnEnabled: boolean;
+  queueMaxSize: number;
+  queueWarnThreshold: number;
+  promptManualBeforeReplace: boolean;
 };
 
 export type ButtonTone = "primary" | "danger" | "subtle" | "default";

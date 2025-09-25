@@ -45,9 +45,19 @@ function renderActionIconButton(action: string, icon: Spicetify.Icon, title: str
   return `<button type="button" class="qs-icon-btn" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
 }
 
-function renderBadge(text: string, variant: "default" | "accent" = "default"): string {
-  const cls = variant === "accent" ? "qs-pill qs-pill--accent" : "qs-pill";
-  return `<span class="${cls}">${escapeHtml(text)}</span>`;
+type BadgeVariant = "default" | "accent" | "version" | "channel";
+
+function renderBadge(text: string, variant: BadgeVariant = "default"): string {
+  const classes = ["qs-pill"];
+  if (variant !== "default") {
+    const variantClasses: Record<Exclude<BadgeVariant, "default">, string> = {
+      accent: "qs-pill--accent",
+      version: "qs-pill--version",
+      channel: "qs-pill--channel",
+    };
+    classes.push(variantClasses[variant]);
+  }
+  return `<span class="${classes.join(" ")}">${escapeHtml(text)}</span>`;
 }
 
 function generateRowsHTMLFor(list: Snapshot[]): string {
@@ -138,8 +148,8 @@ function generateSectionsHTML(): string {
 }
 
 export function openManagerModal(ui: UIHandlers): void {
-  const versionBadge = `<span class="qs-pill qs-pill--version">${escapeHtml(`v${APP_VERSION}`)}</span>`;
-  const channelBadge = APP_CHANNEL ? `<span class="qs-pill qs-pill--channel">${escapeHtml(APP_CHANNEL.toUpperCase())}</span>` : "";
+  const versionBadge = renderBadge(`v${APP_VERSION}`, "version");
+  const channelBadge = APP_CHANNEL ? renderBadge(APP_CHANNEL.toUpperCase(), "channel") : "";
   const sections = generateSectionsHTML();
   const s = ui.getSettings();
 
@@ -181,7 +191,7 @@ export function openManagerModal(ui: UIHandlers): void {
               <div style="opacity:0.7; font-size:12px">Equal queues are never saved as automatic snapshots.</div>
             </div>
             <div class="qs-setting" style="margin-top:12px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled !== false ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} Warn when queue is nearly full</label>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} Warn when queue is nearly full</label>
               <div style="opacity:0.7; font-size:12px">Heuristic limit; includes current track. Adjust if needed.</div>
             </div>
             <div class="qs-setting" style="margin-top:12px">
@@ -202,11 +212,11 @@ export function openManagerModal(ui: UIHandlers): void {
             </div>
             <div class="qs-setting">
               <label>${getIconMarkup("queue")} Queue max size</label>
-              <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize ?? 80}" ${s.queueWarnEnabled !== false ? "" : "disabled"} />
+              <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize}" ${s.queueWarnEnabled ? "" : "disabled"} />
             </div>
             <div class="qs-setting">
               <label>${getIconMarkup("exclamation-circle")} Warn when remaining slots ≤</label>
-              <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold ?? 5}" ${s.queueWarnEnabled !== false ? "" : "disabled"} />
+              <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold}" ${s.queueWarnEnabled ? "" : "disabled"} />
             </div>
           </div>
         </div>
@@ -243,7 +253,7 @@ export function openManagerModal(ui: UIHandlers): void {
     if (intervalInput) intervalInput.disabled = !(st.autoEnabled && st.autoMode === "timer");
     if (chkOnlyNew) chkOnlyNew.disabled = !st.autoEnabled;
     if (maxAutosInput) maxAutosInput.disabled = !st.autoEnabled;
-    const warnEnabled = st.queueWarnEnabled !== false;
+    const warnEnabled = st.queueWarnEnabled;
     if (queueMaxSizeInput) queueMaxSizeInput.disabled = !warnEnabled;
     if (queueWarnThresholdInput) queueWarnThresholdInput.disabled = !warnEnabled;
   }
@@ -289,7 +299,7 @@ export function openManagerModal(ui: UIHandlers): void {
     if (!clickedButton) return;
 
     const rowEl = clickedButton.closest<HTMLElement>(".qs-row");
-    const actionAttr = clickedButton.getAttribute("data-action") ?? undefined;
+    const actionAttr = clickedButton.getAttribute("data-action");
     const isRowAction = clickedButton.classList.contains("qs-icon-btn");
 
     if (!rowEl || (!actionAttr && isRowAction)) return;
@@ -456,7 +466,7 @@ export function openManagerModal(ui: UIHandlers): void {
     }
     if (target.id === "qs-queue-warn-enabled") {
       const checkbox = target as HTMLInputElement;
-      const queueWarnEnabled = !!checkbox.checked;
+      const queueWarnEnabled = checkbox.checked;
       const s0 = ui.getSettings();
       const newSettings: Settings = { ...s0, queueWarnEnabled };
       ui.setSettings(newSettings);
@@ -467,7 +477,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const input = target as HTMLInputElement;
       const s0 = ui.getSettings();
       const num = parseInt(input.value, 10);
-      const value = Number.isFinite(num) && num > 1 ? num : (s0.queueMaxSize ?? 80);
+      const value = Number.isFinite(num) && num > 1 ? num : s0.queueMaxSize;
       const newSettings: Settings = { ...s0, queueMaxSize: value };
       ui.setSettings(newSettings);
       return;
@@ -476,14 +486,14 @@ export function openManagerModal(ui: UIHandlers): void {
       const input = target as HTMLInputElement;
       const s0 = ui.getSettings();
       const num = parseInt(input.value, 10);
-      const value = Number.isFinite(num) && num >= 0 ? num : (s0.queueWarnThreshold ?? 5);
+      const value = Number.isFinite(num) && num >= 0 ? num : s0.queueWarnThreshold;
       const newSettings: Settings = { ...s0, queueWarnThreshold: value };
       ui.setSettings(newSettings);
       return;
     }
     if (target.id === "qs-prompt-manual-before-replace") {
       const checkbox = target as HTMLInputElement;
-      const promptManualBeforeReplace = !!checkbox.checked;
+      const promptManualBeforeReplace = checkbox.checked;
       const s0 = ui.getSettings();
       const newSettings: Settings = { ...s0, promptManualBeforeReplace };
       ui.setSettings(newSettings);

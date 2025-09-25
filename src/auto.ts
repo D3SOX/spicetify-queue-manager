@@ -132,10 +132,6 @@ export function createAutoManager(getSettings: () => Settings) {
       startQueueWatcher(newSettings);
     } else if (desiredMode === "timer") {
       startAutoTimer(newSettings);
-    } else {
-      // disabled
-      unregisterQueueWatcher();
-      stopAutoTimer();
     }
 
     currentMode = desiredMode;
@@ -154,8 +150,8 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
     try {
       const s = getSettings();
       if (!s.queueWarnEnabled) return;
-      const maxSize = s.queueMaxSize ?? 80;
-      const threshold = s.queueWarnThreshold ?? 5;
+      const maxSize = s.queueMaxSize;
+      const threshold = s.queueWarnThreshold;
       if (threshold < 0 || maxSize <= 1) return;
 
       const items = await getQueueFromSpicetify();
