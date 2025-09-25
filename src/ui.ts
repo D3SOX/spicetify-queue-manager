@@ -4,6 +4,7 @@ import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
+import { showErrorToast, showSuccessToast } from "./toast";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
@@ -90,7 +91,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
     if (save) {
       const newValue = state.input.value.trim();
       if (!newValue) {
-        Spicetify.showNotification("Name cannot be empty", true, 2000);
+        showErrorToast("Name cannot be empty", { duration: 2000 });
         beginInlineRename(rowEl, snapshot);
         return;
       }
@@ -99,7 +100,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
         return;
       }
       if (newValue === state.generatedName) {
-        Spicetify.showNotification("Name must differ from the default suggestion", true, 2000);
+        showErrorToast("Name must differ from the default suggestion", { duration: 2000 });
         return;
       }
       const snapshots = loadSnapshots();
@@ -390,6 +391,8 @@ export function openManagerModal(ui: UIHandlers): void {
     if (!modalRoot) return;
     if (!target) return;
 
+    const snapshots = loadSnapshots();
+
     const clickedButton = target.closest<HTMLButtonElement>(".qs-btn, .qs-icon-btn");
 
     if (clickedButton?.id === "qs-new-manual") {
@@ -406,12 +409,12 @@ export function openManagerModal(ui: UIHandlers): void {
     }
     if (clickedButton?.id === "qs-export-manuals") {
       e.preventDefault();
-      const data = loadSnapshots().filter(s => s.type === "manual");
+      const data = snapshots.filter(s => s.type === "manual");
       return await downloadJson(`${APP_NAME}-manual-snapshots.json`, data);
     }
     if (clickedButton?.id === "qs-export-autos") {
       e.preventDefault();
-      const data = loadSnapshots().filter(s => s.type === "auto");
+      const data = snapshots.filter(s => s.type === "auto");
       return await downloadJson(`${APP_NAME}-auto-snapshots.json`, data);
     }
     if (clickedButton?.id === "qs-refresh") {
@@ -432,7 +435,7 @@ export function openManagerModal(ui: UIHandlers): void {
     if (!inlineEditors.has(id)) {
       closeAllInlineEditors(id);
     }
-    const snap = loadSnapshots().find(s => s.id === id);
+    const snap = snapshots.find(s => s.id === id);
     if (!snap) return;
 
     if (isRowAction) {
@@ -443,7 +446,6 @@ export function openManagerModal(ui: UIHandlers): void {
       }
       if (actionAttr === "reset-name") {
         e.preventDefault();
-        const snapshots = loadSnapshots();
         const idx = snapshots.findIndex(s => s.id === id);
         if (idx >= 0) {
           delete snapshots[idx].name;
@@ -526,9 +528,11 @@ export function openManagerModal(ui: UIHandlers): void {
         exportingIds.delete(id);
         return;
       }
-      const remaining = loadSnapshots().filter(s => s.id !== id);
+      const snapshotName = getSnapshotDisplayName(snap);
+      const remaining = snapshots.filter(s => s.id !== id);
       saveSnapshots(remaining);
       renderList();
+      showSuccessToast(`Snapshot deleted: ${snapshotName}`);
       return;
     }
   };

@@ -1,4 +1,5 @@
 import { APP_NAME } from "./appInfo";
+import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
 
 export function formatDateTime(ts: number): string {
   try {
@@ -62,7 +63,7 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
         return;
       } catch (err: any) {
         if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-          Spicetify.showNotification(`${APP_NAME}: Export canceled`);
+          showWarningToast("Export canceled");
           return;
         }
       }
@@ -77,9 +78,9 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    Spicetify.showNotification(`${APP_NAME}: Exported ${filename} to Downloads folder`);
+    showSuccessToast(`Exported ${filename} to Downloads folder`);
   } catch (e) {
     console.warn(`${APP_NAME}: downloadJson failed`, e);
-    Spicetify.showNotification(`${APP_NAME}: Failed to export JSON`);
+    showErrorToast("Failed to export JSON");
   }
 }

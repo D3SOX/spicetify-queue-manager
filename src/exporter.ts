@@ -5,12 +5,13 @@ import { addSnapshot } from "./storage";
 import { generateId, setButtonLabel } from "./utils";
 import { APP_NAME } from "./appInfo";
 import { showPromptDialog } from "./dialogs";
+import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
 
 export async function createManualSnapshot(): Promise<void> {
   try {
     const items = await getQueueFromSpicetify();
     if (!items.length) {
-      Spicetify.showNotification(`${APP_NAME}: No queue found. If you believe this is an error, please try to play and pause a track.`);
+      showWarningToast("No queue found. If you believe this is an error, please try to play and pause a track.");
       return;
     }
     const defaultName = getSnapshotGeneratedNameFor({ type: "manual", createdAt: Date.now() });
@@ -26,7 +27,7 @@ export async function createManualSnapshot(): Promise<void> {
       // canceled
       return;
     } else if (name === '') {
-      Spicetify.showNotification(`${APP_NAME}: Snapshot not saved (name cannot be empty)`);
+      showErrorToast("Snapshot not saved (name cannot be empty)");
       return;
     }
 
@@ -38,17 +39,17 @@ export async function createManualSnapshot(): Promise<void> {
       items,
     };
     addSnapshot(snapshot);
-    Spicetify.showNotification(`${APP_NAME}: Snapshot saved`);
+    showSuccessToast("Snapshot saved");
   } catch (e) {
     console.error(`${APP_NAME}: manual snapshot failed`, e);
-    Spicetify.showNotification(`${APP_NAME}: Failed to save snapshot`);
+    showErrorToast("Failed to save snapshot");
   }
 }
 
 export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
   try {
     if (!snapshot.items.length) {
-      Spicetify.showNotification(`${APP_NAME}: Nothing to export`);
+      showWarningToast("Nothing to export");
       return;
     }
 
@@ -89,7 +90,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     const allAdded = totalAdded === totalExpected;
 
     if (allAdded) {
-      Spicetify.showNotification(`${APP_NAME}: Exported to ${playlistName}`);
+      showSuccessToast(`Exported to ${playlistName}`);
       try {
         const uri = Spicetify.URI.playlistV2URI(playlistId);
         const path = uri?.toURLPath(true);
@@ -107,7 +108,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
         }
       } catch {}
     } else {
-      Spicetify.showNotification(`${APP_NAME}: Exported; some tracks couldn't be added (${totalAdded}/${totalExpected})`);
+      showWarningToast(`Exported; some tracks couldn't be added (${totalAdded}/${totalExpected})`);
     }
 
     try {
@@ -119,7 +120,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     } catch {}
   } catch (e) {
     console.error(`${APP_NAME}: export failed`, e);
-    Spicetify.showNotification(`${APP_NAME}: Failed to export to playlist`);
+    showErrorToast("Failed to export to playlist");
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;
@@ -131,7 +132,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
 export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
   try {
     if (!snapshot.items.length) {
-      Spicetify.showNotification(`${APP_NAME}: Snapshot is empty`);
+      showWarningToast("Snapshot is empty");
       return;
     }
     if (buttonEl) {
@@ -156,7 +157,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
         await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
       } catch (e2) {
         console.warn(`${APP_NAME}: failed to start first track`, e2);
-        Spicetify.showNotification(`${APP_NAME}: Failed to start snapshot`);
+        showErrorToast("Failed to start snapshot");
         return;
       }
     }
@@ -177,13 +178,13 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     }
 
     if (added === items.length) {
-      Spicetify.showNotification(`${APP_NAME}: Queue replaced (${snapshot.items.length} items)`);
+      showSuccessToast(`Queue replaced (${snapshot.items.length} items)`);
     } else {
-      Spicetify.showNotification(`${APP_NAME}: Replaced; some items couldn't be queued (${added + 1}/${snapshot.items.length})`);
+      showWarningToast(`Replaced; some items couldn't be queued (${added + 1}/${snapshot.items.length})`);
     }
   } catch (e) {
     console.error(`${APP_NAME}: replace queue failed`, e);
-    Spicetify.showNotification(`${APP_NAME}: Failed to replace queue`);
+    showErrorToast("Failed to replace queue");
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;

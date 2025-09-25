@@ -21,10 +21,7 @@ type PromptDialogOptions = {
 let dialogOpen = false;
 
 function getToneClass(tone?: ButtonTone): string {
-  if (tone === "danger") return "danger";
-  if (tone === "primary") return "primary";
-  if (tone === "subtle") return "subtle";
-  return "default";
+  return (tone === "danger" || tone === "primary" || tone === "subtle") ? tone : "default";
 }
 
 function createBackdrop(): HTMLDivElement {

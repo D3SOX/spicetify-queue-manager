@@ -3,6 +3,7 @@ import { getQueueFromSpicetify } from "./queue";
 import { areQueuesEqual, generateId } from "./utils";
 import { addSnapshot, getSortedSnapshots, pruneAutosToMax as storagePruneAutosToMax } from "./storage";
 import { APP_NAME } from "./appInfo";
+import { showErrorToast, showWarningToast } from "./toast";
 
 
 export function createAutoManager(getSettings: () => Settings) {
@@ -50,7 +51,7 @@ export function createAutoManager(getSettings: () => Settings) {
       lastSnapshotItems = currentItems;
     } catch (e) {
       console.error(`${APP_NAME}: auto snapshot error`, e);
-      Spicetify.showNotification(`${APP_NAME}: failed to save an automatic snapshot`);
+      showErrorToast("Failed to save an automatic snapshot");
     }
   }
 
@@ -99,7 +100,7 @@ export function createAutoManager(getSettings: () => Settings) {
       });
     } catch (e) {
       console.error(`${APP_NAME}: failed to start queue update watcher`, e);
-      Spicetify.showNotification(`${APP_NAME}: failed to start queue update watcher`);
+      showErrorToast("Failed to start queue update watcher");
     }
   }
 
@@ -161,7 +162,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
         const now = Date.now();
         if (lastWarnRemaining !== remaining || now - lastWarnAt >= warnCooldownMs) {
           const used = maxSize - remaining;
-          Spicetify.showNotification(`${APP_NAME}: Queue nearly full (${used}/${maxSize})`, false, 2500);
+          showWarningToast(`Queue nearly full (${used}/${maxSize})`, { duration: 250000, id: "queue-nearly-full" });
           lastWarnRemaining = remaining;
           lastWarnAt = now;
         }
@@ -203,7 +204,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
       checkAndWarnOnce();
     } catch (e) {
       console.error(`${APP_NAME}: failed to start capacity watcher`, e);
-      Spicetify.showNotification(`${APP_NAME}: failed to start capacity watcher`);
+      showErrorToast("Failed to start capacity watcher");
     }
   }
 
