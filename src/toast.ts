@@ -17,7 +17,138 @@ export type ToastHandle = {
 };
 
 let container: HTMLElement | null = null;
-const activeToasts = new Map<HTMLElement, number>();
+
+type ToastState = {
+  timeoutId?: number;
+  rafId?: number;
+  startTime: number;
+  endTime: number;
+  remaining: number;
+  totalDuration: number;
+  progressTrack: HTMLElement | null;
+  progressBar: HTMLElement | null;
+};
+
+const toastStates = new Map<HTMLElement, ToastState>();
+
+function isFiniteDuration(duration: number): duration is number {
+  return Number.isFinite(duration) && duration > 0;
+}
+
+function ensureProgressElements(toastEl: HTMLElement): { track: HTMLElement; bar: HTMLElement } {
+  let track = toastEl.querySelector<HTMLElement>(".qs-toast-progress") ?? null;
+  let bar = track?.querySelector<HTMLElement>(".qs-toast-progress__bar") ?? null;
+
+  if (!track) {
+    track = document.createElement("div");
+    track.className = "qs-toast-progress qs-toast-progress--hidden";
+    track.setAttribute("aria-hidden", "true");
+  } else if (!track.classList.contains("qs-toast-progress--hidden") && !track.classList.contains("qs-toast-progress--visible")) {
+    track.classList.add("qs-toast-progress--hidden");
+  }
+
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.className = "qs-toast-progress__bar";
+    bar.style.transform = "scaleX(0)";
+    track.appendChild(bar);
+  } else if (bar.parentElement !== track) {
+    track.appendChild(bar);
+  }
+
+  if (track.parentElement !== toastEl) {
+    toastEl.appendChild(track);
+  } else if (track.nextSibling) {
+    toastEl.appendChild(track);
+  }
+
+  return { track, bar };
+}
+
+function getOrCreateState(toastEl: HTMLElement): ToastState {
+  const { track, bar } = ensureProgressElements(toastEl);
+  let state = toastStates.get(toastEl);
+  if (!state) {
+    const now = performance.now();
+    state = {
+      timeoutId: undefined,
+      rafId: undefined,
+      startTime: now,
+      endTime: now,
+      remaining: Infinity,
+      totalDuration: Infinity,
+      progressTrack: track,
+      progressBar: bar,
+    };
+    toastStates.set(toastEl, state);
+  } else {
+    state.progressTrack = track;
+    state.progressBar = bar;
+  }
+  return state;
+}
+
+function updateProgressBar(toastEl: HTMLElement, value: number | null): void {
+  let state = toastStates.get(toastEl);
+  if (!state || !state.progressTrack || !state.progressBar) {
+    state = getOrCreateState(toastEl);
+  }
+  if (!state.progressTrack || !state.progressBar) return;
+
+  if (value === null || Number.isNaN(value) || value < 0) {
+    state.progressTrack.classList.remove("qs-toast-progress--visible");
+    state.progressTrack.classList.add("qs-toast-progress--hidden");
+    state.progressBar.style.transform = "scaleX(0)";
+    return;
+  }
+
+  const clamped = Math.min(1, Math.max(0, value));
+  state.progressTrack.classList.remove("qs-toast-progress--hidden");
+  state.progressTrack.classList.add("qs-toast-progress--visible");
+  state.progressBar.style.transform = `scaleX(${clamped})`;
+}
+
+function tickProgress(toastEl: HTMLElement): void {
+  const state = toastStates.get(toastEl);
+  if (!state) return;
+
+  if (!isFiniteDuration(state.totalDuration)) {
+    updateProgressBar(toastEl, null);
+    state.rafId = undefined;
+    return;
+  }
+
+  const now = performance.now();
+  const remaining = Math.max(0, state.endTime - now);
+  state.remaining = remaining;
+  const progress = state.totalDuration <= 0 ? 1 : 1 - remaining / state.totalDuration;
+  updateProgressBar(toastEl, progress);
+
+  if (remaining > 0) {
+    state.rafId = window.requestAnimationFrame(() => tickProgress(toastEl));
+  } else {
+    state.rafId = undefined;
+  }
+}
+
+function resumeToastCountdown(toastEl: HTMLElement): void {
+  const state = toastStates.get(toastEl);
+  if (state && isFiniteDuration(state.remaining)) {
+    if (state.remaining <= 0) {
+      dismissToast(toastEl);
+      return;
+    }
+    scheduleRemoval(toastEl, state.remaining, false);
+    return;
+  }
+
+  const fallback = getToastDurationFromMetadata(toastEl);
+  if (fallback && isFiniteDuration(fallback)) {
+    scheduleRemoval(toastEl, fallback);
+  } else {
+    updateProgressBar(toastEl, null);
+  }
+}
 
 function resolveToastBody(message: string | HTMLElement): string | HTMLElement {
   if (typeof message !== "string") {
@@ -69,23 +200,40 @@ function getToastDurationFromMetadata(toastEl: HTMLElement): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function scheduleRemoval(toastEl: HTMLElement, duration: number): void {
+function scheduleRemoval(toastEl: HTMLElement, duration: number, resetTotal = true): void {
+  const state = getOrCreateState(toastEl);
   clearRemoval(toastEl);
   if (duration <= 0 || !isFinite(duration)) {
+    state.remaining = Infinity;
+    state.endTime = Infinity;
+    updateProgressBar(toastEl, null);
     return;
   }
-  const timeoutId = window.setTimeout(() => {
+  const start = performance.now();
+  state.startTime = start;
+  state.endTime = start + duration;
+  state.remaining = duration;
+  if (resetTotal) {
+    state.totalDuration = duration;
+  }
+  updateProgressBar(toastEl, state.totalDuration <= 0 ? 1 : 1 - state.remaining / state.totalDuration);
+  state.timeoutId = window.setTimeout(() => {
     dismissToast(toastEl);
   }, duration);
-  activeToasts.set(toastEl, timeoutId);
+  state.rafId = window.requestAnimationFrame(() => tickProgress(toastEl));
 }
 
 function clearRemoval(toastEl: HTMLElement): void {
-  const timeoutId = activeToasts.get(toastEl);
-  if (typeof timeoutId === "number") {
-    clearTimeout(timeoutId);
+  const state = toastStates.get(toastEl);
+  if (!state) return;
+  if (typeof state.timeoutId === "number") {
+    clearTimeout(state.timeoutId);
+    state.timeoutId = undefined;
   }
-  activeToasts.delete(toastEl);
+  if (typeof state.rafId === "number") {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = undefined;
+  }
 }
 
 function cleanupContainer(): void {
@@ -98,6 +246,7 @@ function cleanupContainer(): void {
 
 function dismissToast(toastEl: HTMLElement, reason: "default" | "swipe" = "default"): void {
   clearRemoval(toastEl);
+  toastStates.delete(toastEl);
   toastEl.classList.remove("qs-toast--enter", "qs-toast--swipe-exit");
   toastEl.classList.add(reason === "swipe" ? "qs-toast--swipe-exit" : "qs-toast--exit");
 
@@ -191,12 +340,14 @@ export function showToast(message: string | HTMLElement, options: ToastOptions =
 
   toastEl.addEventListener("mouseenter", () => {
     clearRemoval(toastEl);
+    const state = toastStates.get(toastEl);
+    if (state && Number.isFinite(state.remaining)) {
+      const now = performance.now();
+      state.remaining = Math.max(0, state.endTime - now);
+    }
   });
   toastEl.addEventListener("mouseleave", () => {
-    const stored = getToastDurationFromMetadata(toastEl);
-    if (stored) {
-      scheduleRemoval(toastEl, stored);
-    }
+    resumeToastCountdown(toastEl);
   });
 
   // Gesture support for swipe dismissal (mouse + touch)
@@ -235,10 +386,7 @@ export function showToast(message: string | HTMLElement, options: ToastOptions =
       dismissToast(toastEl, "swipe");
     } else {
       toastEl.classList.add("qs-toast--enter");
-      const stored = getToastDurationFromMetadata(toastEl);
-      if (stored) {
-        scheduleRemoval(toastEl, stored);
-      }
+      resumeToastCountdown(toastEl);
     }
   };
 
