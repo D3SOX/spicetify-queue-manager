@@ -6,11 +6,15 @@ Do you hate it when Spotify randomly decides your queue is gone — or just want
 
 <img height="750" alt="image" src="https://github.com/user-attachments/assets/47aae376-0eb7-4b6d-a566-fc5f1bacb29e" />
 
-
 </div>
 
 ## Status
 🚧 Beta. Core features are implemented and undergoing polish.
+
+## Installation
+- Open the [Spicetify Marketplace](https://github.com/spicetify/marketplace/wiki/Installation).
+- Search for "Queue Manager" (You might have to click on "Load more" first)
+- Install & reload
 
 ## What it does
 - Save your current queue as named snapshots
@@ -35,7 +39,6 @@ spicetify apply -n
 This project is built with [Spicetify Creator](https://spicetify.app/docs/development/spicetify-creator)
 
 ## Notes
-- Local files are supported by reading from `Spicetify.Queue`, so snapshots include tracks beyond the Web API scope.
 - If something looks off, open DevTools and inspect `Spicetify.Queue` to help debug.
 
 ## License
