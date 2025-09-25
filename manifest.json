@@ -1,7 +1,7 @@
 [
   {
     "name": "Queue Manager",
-    "description": "An extension that snapshots your Spotify queue (including local files), lets you restore it later, and export snapshots to playlists.",
+    "description": "Save snapshots of your queue, restore them later, export to playlists and more",
     "preview": "https://github.com/user-attachments/assets/69747743-d1e9-4385-9031-f7b769836f8f",
     "main": "dist/queue-manager.js",
     "readme": "README.md",
