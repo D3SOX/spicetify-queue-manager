@@ -22,6 +22,8 @@ export type Settings = {
   promptManualBeforeReplace: boolean;
 };
 
+export type BadgeVariant = "default" | "accent" | "version" | "channel";
+
 export type ButtonTone = "primary" | "danger" | "subtle" | "default";
 
 export type ButtonRenderOptions = {

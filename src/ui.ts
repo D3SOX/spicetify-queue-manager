@@ -1,11 +1,12 @@
-import { Snapshot, Settings, ButtonTone, ButtonRenderOptions } from "./types";
-import { loadSnapshots, pruneAutosToMax, saveSettings, saveSnapshots } from "./storage";
+import "./ui.css";
+
+import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
+import { loadSnapshots, pruneAutosToMax, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
-import "./ui.css";
 import { getSortedSnapshots } from "./storage";
 
 export type UIHandlers = {
@@ -44,8 +45,6 @@ function renderButton(label: string, icon: Spicetify.Icon, options: ButtonRender
 function renderActionIconButton(action: string, icon: Spicetify.Icon, title: string): string {
   return `<button type="button" class="qs-icon-btn" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
 }
-
-type BadgeVariant = "default" | "accent" | "version" | "channel";
 
 function renderBadge(text: string, variant: BadgeVariant = "default"): string {
   const classes = ["qs-pill"];
@@ -345,7 +344,6 @@ export function openManagerModal(ui: UIHandlers): void {
     if (!action) return;
 
     if (action === "toggle-items") {
-      e.preventDefault();
       const itemsEl = rowEl.nextElementSibling as HTMLElement | null;
       const btn = clickedButton;
       if (!itemsEl || !itemsEl.classList.contains("qs-items")) return;
@@ -371,19 +369,16 @@ export function openManagerModal(ui: UIHandlers): void {
       }
       return;
     }
-
     if (action === "export") {
       if (exportingIds.has(id)) return;
       exportingIds.add(id);
-      const btn = clickedButton;
-      await exportSnapshotToPlaylist(snap, btn);
+      await exportSnapshotToPlaylist(snap, clickedButton);
       exportingIds.delete(id);
       return;
     }
     if (action === "replace-queue") {
       if (exportingIds.has(id)) return;
       exportingIds.add(id);
-      const btn = clickedButton;
       try {
         const settings = ui.getSettings();
         if (settings.promptManualBeforeReplace) {
@@ -393,7 +388,7 @@ export function openManagerModal(ui: UIHandlers): void {
             renderList();
           }
         }
-        await replaceQueueWithSnapshot(snap, btn);
+        await replaceQueueWithSnapshot(snap, clickedButton);
       } finally {
         exportingIds.delete(id);
       }
