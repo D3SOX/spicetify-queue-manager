@@ -11,6 +11,8 @@ Do you hate it when Spotify randomly decides your queue is gone — or just want
 ## Status
 🚧 Beta. Core features are implemented and undergoing polish.
 
+For changes, see [CHANGELOG.md](./CHANGELOG.md)
+
 ## Installation
 - Open the [Spicetify Marketplace](https://github.com/spicetify/marketplace/wiki/Installation).
 - Search for "Queue Manager" (You might have to click on "Load more" first)
