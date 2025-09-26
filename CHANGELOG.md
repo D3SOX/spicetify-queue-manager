@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.4.3
+
+- Fix playback of first track while replacing queue when it's a local file
+
 ## 0.4.2
 
 - Make buttons have unique tones in snapshot before replacing queue prompt

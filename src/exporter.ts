@@ -149,16 +149,37 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
       console.warn(`${APP_NAME}: clearQueue failed (non-fatal)`, e);
     }
 
-    // Start playback with the first item
-    try {
-      await Spicetify.Player.playUri(first);
-    } catch (e1) {
+    if (first.startsWith("spotify:local:")) {
       try {
-        await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
-      } catch (e2) {
-        console.warn(`${APP_NAME}: failed to start first track`, e2);
-        showErrorToast("Failed to start snapshot");
+        await Spicetify.Platform.PlayerAPI.play({
+          uri: "spotify:internal:local-files",
+          pages: [
+            {
+              items: [{ uri: first }],
+            },
+          ],
+        }, {}, {
+          skipTo: {
+            index: 0,
+          },
+        });
+      } catch (eLocal) {
+        console.warn(`${APP_NAME}: local fallback failed`, eLocal);
+        showErrorToast("Failed to start playback");
         return;
+      }
+    } else {
+      // Start playback with the first item
+      try {
+        await Spicetify.Player.playUri(first);
+      } catch (e1) {
+        try {
+          await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
+        } catch (e2) {
+          console.warn(`${APP_NAME}: failed to start first track`, e2);
+          showErrorToast("Failed to start playback");
+          return;
+        }
       }
     }
 
