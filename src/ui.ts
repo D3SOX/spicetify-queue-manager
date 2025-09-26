@@ -504,7 +504,7 @@ export function openManagerModal(ui: UIHandlers): void {
             confirmLabel: "Save snapshot",
             cancelLabel: "Skip",
             extraLabel: "Cancel",
-            extraTone: "subtle",
+            extraTone: "danger",
             tone: "primary",
           });
           if (shouldSave === "extra") {

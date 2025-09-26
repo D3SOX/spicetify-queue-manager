@@ -1,21 +1,21 @@
 import { ButtonTone } from "./types";
 
 type ConfirmDialogOptions = {
-  title?: string;
+  title: string;
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  tone?: ButtonTone;
+  tone: ButtonTone;
   extraLabel?: string;
   extraTone?: ButtonTone;
 };
 
 type PromptDialogOptions = {
-  title?: string;
-  message?: string;
+  title: string;
+  message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  tone?: ButtonTone;
+  tone: ButtonTone;
   defaultValue?: string;
   placeholder?: string;
 };
@@ -45,7 +45,7 @@ type ConfirmDialogResult = "confirm" | "cancel" | "extra";
 export function showConfirmDialog(options: ConfirmDialogOptions): Promise<ConfirmDialogResult> {
   if (dialogOpen) return Promise.resolve("cancel");
   dialogOpen = true;
-  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone, extraLabel, extraTone } = options;
+  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone, extraLabel, extraTone = "subtle" } = options;
 
   return new Promise(resolve => {
     const backdrop = createBackdrop();
@@ -86,8 +86,8 @@ export function showConfirmDialog(options: ConfirmDialogOptions): Promise<Confir
       extraBtn.type = "button";
       const extraToneClass = getToneClass(extraTone);
       const extraClasses = ["qs-btn"];
-      if (extraToneClass === "default") extraClasses.push("subtle");
-      else extraClasses.push(extraToneClass);
+      if (extraToneClass !== "default") extraClasses.push(extraToneClass);
+      else extraClasses.push("primary");
       extraBtn.className = extraClasses.join(" ");
       extraBtn.textContent = extraLabel;
     }

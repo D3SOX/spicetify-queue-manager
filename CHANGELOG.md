@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.4.2
+
+- Make buttons have unique tones in snapshot before replacing queue prompt
+
 ## 0.4.1
 
 - Show a progress bar on toasts
