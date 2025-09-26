@@ -5,7 +5,7 @@ type ConfirmDialogOptions = {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  tone: ButtonTone;
+  tone?: ButtonTone;
   extraLabel?: string;
   extraTone?: ButtonTone;
 };
@@ -15,7 +15,7 @@ type PromptDialogOptions = {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  tone: ButtonTone;
+  tone?: ButtonTone;
   defaultValue?: string;
   placeholder?: string;
 };
@@ -45,7 +45,7 @@ type ConfirmDialogResult = "confirm" | "cancel" | "extra";
 export function showConfirmDialog(options: ConfirmDialogOptions): Promise<ConfirmDialogResult> {
   if (dialogOpen) return Promise.resolve("cancel");
   dialogOpen = true;
-  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone, extraLabel, extraTone = "subtle" } = options;
+  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone = "default", extraLabel, extraTone = "subtle" } = options;
 
   return new Promise(resolve => {
     const backdrop = createBackdrop();
@@ -146,7 +146,7 @@ export function showPromptDialog(options: PromptDialogOptions): Promise<string |
     message,
     confirmLabel = "Confirm",
     cancelLabel = "Cancel",
-    tone,
+    tone = "default",
     defaultValue = "",
     placeholder,
   } = options;
