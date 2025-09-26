@@ -33,8 +33,8 @@ export function getQueueFromSpicetify(): string[] {
       const provider: string | undefined = it?.provider;
       const meta = it?.contextTrack?.metadata || it?.metadata;
       const isQueuedFlag = meta?.is_queued === true || meta?.is_queued === "true";
-      const isQueued = provider === "queue" || isQueuedFlag;
-      if (!isQueued) continue;
+      const isProvidedByQueue = provider === "queue" || isQueuedFlag;
+      if (!isProvidedByQueue) continue;
       const uri = getTrackUri(it);
       if (uri) {
         list.push(uri);
