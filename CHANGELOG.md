@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.4.4
+
+- Correct duplicate detection for auto snapshots
+
 ## 0.4.3
 
 - Fix playback of first track while replacing queue when it's a local file

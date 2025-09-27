@@ -1,7 +1,7 @@
 import { Snapshot, Settings, AutoMode, QueueUpdateEvent } from "./types";
 import { getQueueFromSpicetify } from "./queue";
 import { areQueuesEqual, generateId } from "./utils";
-import { addSnapshot, getSortedSnapshots, pruneAutosToMax as storagePruneAutosToMax } from "./storage";
+import { addSnapshot, getSortedSnapshots, loadSnapshots, pruneAutosToMax as storagePruneAutosToMax } from "./storage";
 import { APP_NAME } from "./appInfo";
 import { showErrorToast, showWarningToast } from "./toast";
 
@@ -38,6 +38,14 @@ export function createAutoManager(getSettings: () => Settings) {
         }
       }
       if (areQueuesEqual(currentItems, lastSnapshotItems)) {
+        lastSnapshotItems = currentItems;
+        return;
+      }
+
+      // also check for other duplicates in the existing auto snapshots
+      const existingAutos = loadSnapshots().filter(snap => snap.type === "auto");
+      if (existingAutos.some(snap => areQueuesEqual(snap.items, currentItems))) {
+        lastSnapshotItems = currentItems;
         return;
       }
 
