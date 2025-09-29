@@ -84,7 +84,7 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
         return;
       } catch (err: any) {
         if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-          showWarningToast("Export canceled");
+          showWarningToast(`Export canceled (${err.name})`);
           return;
         }
       }

@@ -7,7 +7,7 @@ import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon 
 import { showErrorToast, showSuccessToast } from "./toast";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { appendSnapshotToQueue, replaceQueueWithSnapshot } from "./exporter";
-import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
+import { APP_CHANNEL, APP_NAME, APP_NAME_SLUG, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
 import { showConfirmDialog, ConfirmDialogResult } from "./dialogs";
 import { importSettings, importSnapshots } from "./importer";
@@ -423,7 +423,7 @@ export function openManagerModal(ui: UIHandlers): void {
     if (clickedButton?.id === "qs-export-settings") {
       e.preventDefault();
       const settings = ui.getSettings();
-      return await downloadJson(`${APP_NAME}-settings.json`, settings);
+      return await downloadJson(`${APP_NAME_SLUG}-settings.json`, settings);
     }
     if (clickedButton?.id === "qs-import-settings") {
       e.preventDefault();
@@ -436,12 +436,12 @@ export function openManagerModal(ui: UIHandlers): void {
     if (clickedButton?.id === "qs-export-manuals") {
       e.preventDefault();
       const data = snapshots.filter(s => s.type === "manual");
-      return await downloadJson(`${APP_NAME}-manual-snapshots.json`, data);
+      return await downloadJson(`${APP_NAME_SLUG}-manual-snapshots.json`, data);
     }
     if (clickedButton?.id === "qs-export-autos") {
       e.preventDefault();
       const data = snapshots.filter(s => s.type === "auto");
-      return await downloadJson(`${APP_NAME}-auto-snapshots.json`, data);
+      return await downloadJson(`${APP_NAME_SLUG}-auto-snapshots.json`, data);
     }
     if (clickedButton?.id === "qs-refresh") {
       e.preventDefault();
