@@ -10,6 +10,7 @@ import { appendSnapshotToQueue, replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
 import { showConfirmDialog, ConfirmDialogResult } from "./dialogs";
+import { importSettings, importSnapshots } from "./importer";
 
 export type UIHandlers = {
   getSettings: () => Settings;
@@ -271,24 +272,8 @@ function generateSectionsHTML(): string {
     `;
 }
 
-export function openManagerModal(ui: UIHandlers): void {
-  const versionBadge = renderBadge(`v${APP_VERSION}`, "version");
-  const channelBadge = APP_CHANNEL ? renderBadge(APP_CHANNEL.toUpperCase(), "channel") : "";
-  const sections = generateSectionsHTML();
-  const s = ui.getSettings();
-
-  const body = `
-      <div class="qs-container">
-        <div class="qs-header">
-          <div class="qs-header-title">
-            <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
-            <span class="qs-header-badges">${versionBadge}${channelBadge}</span>
-          </div>
-          <div class="qs-actions">
-            ${renderButton("Refresh", "repeat", { id: "qs-refresh", tone: "subtle" })}
-            ${renderButton("Export settings", "download", { id: "qs-export-settings" })}
-          </div>
-        </div>
+function generateSettingsHTML(s: Settings): string {
+  return `
         <div class="qs-settings">
           <div class="qs-settings-header">
             <div class="qs-section-heading">
@@ -344,6 +329,38 @@ export function openManagerModal(ui: UIHandlers): void {
             </div>
           </div>
         </div>
+    `;
+}
+
+export function renderSettings(ui: UIHandlers) {
+    const settingsEl = document.querySelector(".qs-settings");
+    if (settingsEl) {
+        settingsEl.outerHTML = generateSettingsHTML(ui.getSettings());
+    }
+}
+
+export function openManagerModal(ui: UIHandlers): void {
+  const versionBadge = renderBadge(`v${APP_VERSION}`, "version");
+  const channelBadge = APP_CHANNEL ? renderBadge(APP_CHANNEL.toUpperCase(), "channel") : "";
+  const sections = generateSectionsHTML();
+  const s = ui.getSettings();
+  const settingsHTML = generateSettingsHTML(s);
+
+  const body = `
+      <div class="qs-container">
+        <div class="qs-header">
+          <div class="qs-header-title">
+            <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
+            <span class="qs-header-badges">${versionBadge}${channelBadge}</span>
+          </div>
+          <div class="qs-actions">
+            ${renderButton("Refresh", "repeat", { id: "qs-refresh", tone: "subtle" })}
+            ${renderButton("Export settings", "download", { id: "qs-export-settings", title: "Export settings to a JSON file" })}
+            ${renderButton("Import snapshots", "chart-up", { id: "qs-import-snapshots", title: "Import snapshots from a JSON file" })}
+            ${renderButton("Import settings", "chart-up", { id: "qs-import-settings", title: "Import settings from a JSON file" })}
+          </div>
+        </div>
+        ${settingsHTML}
         <div id="qs-list">
           ${sections || '<div style="opacity:0.7">No snapshots yet</div>'}
         </div>
@@ -407,6 +424,14 @@ export function openManagerModal(ui: UIHandlers): void {
       const settings = ui.getSettings();
       return await downloadJson(`${APP_NAME}-settings.json`, settings);
     }
+    if (clickedButton?.id === "qs-import-settings") {
+      e.preventDefault();
+      return await importSettings(ui);
+    }
+    if (clickedButton?.id === "qs-import-snapshots") {
+      e.preventDefault();
+      return await importSnapshots();
+    }
     if (clickedButton?.id === "qs-export-manuals") {
       e.preventDefault();
       const data = snapshots.filter(s => s.type === "manual");
@@ -419,6 +444,7 @@ export function openManagerModal(ui: UIHandlers): void {
     }
     if (clickedButton?.id === "qs-refresh") {
       e.preventDefault();
+      renderSettings(ui);
       renderList();
       return;
     }

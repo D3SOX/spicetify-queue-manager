@@ -84,3 +84,68 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
     showErrorToast("Failed to export JSON");
   }
 }
+
+export async function uploadJson<T>(): Promise<T | null> {
+  try {
+    const w: any = window as any;
+    let fileContent: string | undefined;
+
+    if (w && typeof w.showOpenFilePicker === "function") {
+      try {
+        const [handle] = await w.showOpenFilePicker({
+          multiple: false,
+          types: [
+            {
+              description: "JSON Files",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+        const file = await handle.getFile();
+        fileContent = await file.text();
+      } catch (err: any) {
+        if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+          showWarningToast(`Import canceled (${err.name})`);
+          return null;
+        }
+      }
+    } else {
+      // Fallback for browsers that don't support showOpenFilePicker
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json,application/json";
+
+      const content = await new Promise<string | null>(resolve => {
+        input.onchange = async () => {
+          if (input.files?.length) {
+            try {
+              const file = input.files[0];
+              const text = await file.text();
+              resolve(text);
+            } catch (readErr) {
+              console.error(`${APP_NAME}: file read failed`, readErr);
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        };
+        input.click();
+      });
+      if (content) {
+        fileContent = content;
+      }
+    }
+
+    if (typeof fileContent !== "string") {
+      return null;
+    }
+
+    const data = JSON.parse(fileContent);
+    return data as T;
+  } catch (e) {
+    console.warn(`${APP_NAME}: uploadJson failed`, e);
+    showErrorToast("Failed to import JSON");
+    return null;
+  }
+}
