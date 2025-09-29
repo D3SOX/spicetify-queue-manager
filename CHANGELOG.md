@@ -2,6 +2,12 @@
 
 This documents the user-facing changes for each version
 
+## 0.5
+
+- Import settings and snapshots
+- Append snapshots to queue
+- Update UI icons and layout
+
 ## 0.4.4
 
 - Correct duplicate detection for auto snapshots
