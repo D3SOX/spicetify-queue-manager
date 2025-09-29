@@ -129,6 +129,68 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
   }
 }
 
+export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
+  try {
+    if (!snapshot.items.length) {
+      showWarningToast("Snapshot is empty");
+      return;
+    }
+
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      setButtonLabel(buttonEl, "Appending…");
+    }
+
+    const items = snapshot.items.slice();
+    let added = 0;
+
+    for (let i = 0; i < items.length; i += 100) {
+      const chunkUris = items.slice(i, i + 100);
+      const chunk = chunkUris.map(uri => ({ uri }));
+      try {
+        await Spicetify.Platform.PlayerAPI.addToQueue(chunk);
+        added += chunk.length;
+      } catch (err) {
+        console.warn(`${APP_NAME}: addToQueue chunk failed`, err);
+        for (const uri of chunkUris) {
+          try {
+            await Spicetify.Platform.PlayerAPI.addToQueue([{ uri }]);
+            added += 1;
+          } catch (singleErr) {
+            console.warn(`${APP_NAME}: addToQueue single failed`, { uri, error: singleErr });
+          }
+        }
+      }
+    }
+
+    const totalExpected = items.length;
+
+    if (added === totalExpected) {
+      showSuccessToast(`Added ${totalExpected} ${totalExpected === 1 ? "item" : "items"} to queue`);
+    } else if (added > 0) {
+      showWarningToast(`Added ${added}/${totalExpected} items to queue`);
+    } else {
+      showErrorToast("Failed to queue snapshot items");
+    }
+
+    try {
+      console.log(`${APP_NAME}: Append result`, {
+        snapshotId: snapshot.id,
+        totalExpected,
+        added,
+      });
+    } catch {}
+  } catch (e) {
+    console.error(`${APP_NAME}: append queue failed`, e);
+    showErrorToast("Failed to append to queue");
+  } finally {
+    if (buttonEl) {
+      buttonEl.disabled = false;
+      setButtonLabel(buttonEl, "Append to queue");
+    }
+  }
+}
+
 export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
   try {
     if (!snapshot.items.length) {

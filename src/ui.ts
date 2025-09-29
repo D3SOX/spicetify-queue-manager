@@ -6,7 +6,7 @@ import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameF
 import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
 import { showErrorToast, showSuccessToast } from "./toast";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
-import { replaceQueueWithSnapshot } from "./exporter";
+import { appendSnapshotToQueue, replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
 import { showConfirmDialog, ConfirmDialogResult } from "./dialogs";
@@ -210,6 +210,7 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
               <div class="qs-row-actions">
                 ${renderButton("View items", "list-view", { action: "toggle-items", title: "Toggle items" })}
                 ${renderButton("Replace queue", "queue", { action: "replace-queue", title: "Replace queue", tone: "primary" })}
+                ${renderButton("Append to queue", "queue", { action: "append-queue", title: "Append to queue" })}
                 ${renderButton("Export", "download", { action: "export", title: "Export to playlist" })}
                 ${renderButton("Delete", "minus", { action: "delete", title: "Delete snapshot", tone: "danger" })}
               </div>
@@ -490,6 +491,16 @@ export function openManagerModal(ui: UIHandlers): void {
       exportingIds.add(id);
       await exportSnapshotToPlaylist(snap, clickedButton);
       exportingIds.delete(id);
+      return;
+    }
+    if (action === "append-queue") {
+      if (exportingIds.has(id)) return;
+      exportingIds.add(id);
+      try {
+        await appendSnapshotToQueue(snap, clickedButton);
+      } finally {
+        exportingIds.delete(id);
+      }
       return;
     }
     if (action === "replace-queue") {
