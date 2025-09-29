@@ -1,6 +1,8 @@
 import { APP_NAME } from "./appInfo";
 import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
 
+export const DEFAULT_ICON_SIZE = 16;
+
 export function formatDateTime(ts: number): string {
   try {
     return new Date(ts).toLocaleString();
@@ -18,12 +20,31 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
+export function getIconMarkup(icon: Spicetify.Icon, size = DEFAULT_ICON_SIZE): string {
+  const iconMap = (Spicetify.SVGIcons ?? {}) as Record<string, string>;
+  const raw = iconMap[icon];
+  if (!raw) return "";
+  return `<span class="qs-btn-icon" data-icon-name="${escapeHtml(
+    icon,
+  )}"><svg class="qs-svg-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false" style="width:${size}px;height:${size}px;">${raw}</svg></span>`;
+}
+
 export function setButtonLabel(button: HTMLButtonElement, label: string): void {
   const span = button.querySelector<HTMLElement>(".qs-btn-label");
   if (span) {
     span.textContent = label;
   } else {
     button.textContent = label;
+  }
+}
+
+export function setButtonIcon(button: HTMLButtonElement, icon: Spicetify.Icon): void {
+  const iconEl = button.querySelector<HTMLElement>(".qs-btn-icon");
+  if (iconEl) {
+    const newIconHTML = getIconMarkup(icon);
+    if (newIconHTML) {
+      iconEl.outerHTML = newIconHTML;
+    }
   }
 }
 

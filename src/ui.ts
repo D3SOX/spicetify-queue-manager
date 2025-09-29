@@ -3,7 +3,7 @@ import "./ui.css";
 import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
-import { escapeHtml, downloadJson, setButtonLabel } from "./utils";
+import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon } from "./utils";
 import { showErrorToast, showSuccessToast } from "./toast";
 import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { appendSnapshotToQueue, replaceQueueWithSnapshot } from "./exporter";
@@ -143,15 +143,6 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
   }, 0);
 }
 
-const DEFAULT_ICON_SIZE = 16;
-
-function getIconMarkup(icon: Spicetify.Icon, size = DEFAULT_ICON_SIZE): string {
-  const iconMap = (Spicetify.SVGIcons ?? {}) as Record<string, string>;
-  const raw = iconMap[icon];
-  if (!raw) return "";
-  return `<span class="qs-btn-icon" data-icon-name="${escapeHtml(icon)}"><svg class="qs-svg-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false" style="width:${size}px;height:${size}px;">${raw}</svg></span>`;
-}
-
 function renderButton(label: string, icon: Spicetify.Icon, options: ButtonRenderOptions = {}): string {
   const { action, id, tone = "default", title } = options;
   const classes = ["qs-btn"];
@@ -167,8 +158,18 @@ function renderButton(label: string, icon: Spicetify.Icon, options: ButtonRender
   return `<button type="button" class="${classes.join(" ")}"${attrString}>${iconHtml}<span class="qs-btn-label">${escapeHtml(label)}</span></button>`;
 }
 
-function renderActionIconButton(action: string, icon: Spicetify.Icon, title: string): string {
-  return `<button type="button" class="qs-icon-btn" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
+function renderActionIconButton(
+  action: string,
+  icon: Spicetify.Icon,
+  title: string,
+  options: { tone?: ButtonRenderOptions["tone"] } = {},
+): string {
+  const { tone = "default" } = options;
+  const classes = ["qs-icon-btn"];
+  if (tone === "danger") classes.push("danger");
+  return `<button type="button" class="${classes.join(
+    " ",
+  )}" data-action="${escapeHtml(action)}" title="${escapeHtml(title)}">${getIconMarkup(icon)}</button>`;
 }
 
 function renderBadge(text: string, variant: BadgeVariant = "default"): string {
@@ -205,15 +206,15 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
                 <span class="qs-title-actions">
                   ${renderActionIconButton("rename", "edit", "Rename snapshot")}
                   ${s.name ? renderActionIconButton("reset-name", "repeat", "Reset name") : ""}
+                  ${renderActionIconButton("delete", "x", "Delete snapshot", { tone: "danger" })}
                 </span>
               </div>
               <div class="qs-row-meta">${meta}</div>
               <div class="qs-row-actions">
-                ${renderButton("View items", "list-view", { action: "toggle-items", title: "Toggle items" })}
-                ${renderButton("Replace queue", "queue", { action: "replace-queue", title: "Replace queue", tone: "primary" })}
-                ${renderButton("Append to queue", "queue", { action: "append-queue", title: "Append to queue" })}
+                ${renderButton("View", "chevron-right", { action: "toggle-items", title: "Toggle items" })}
+                ${renderButton("Replace queue", "skip-forward", { action: "replace-queue", title: "Replace queue", tone: "primary" })}
+                ${renderButton("Append to queue", "plus-alt", { action: "append-queue", title: "Append to queue" })}
                 ${renderButton("Export", "download", { action: "export", title: "Export to playlist" })}
-                ${renderButton("Delete", "minus", { action: "delete", title: "Delete snapshot", tone: "danger" })}
               </div>
             </div>
           </div>
@@ -480,6 +481,21 @@ export function openManagerModal(ui: UIHandlers): void {
         }
         return;
       }
+      if (actionAttr === "delete") {
+        const confirmDelete: ConfirmDialogResult = await showConfirmDialog({
+          title: "Delete snapshot",
+          message: "Delete this snapshot? This cannot be undone.",
+          confirmLabel: "Delete",
+          tone: "danger",
+        });
+        if (confirmDelete !== "confirm") return;
+        const snapshotName = getSnapshotDisplayName(snap);
+        const remaining = snapshots.filter(s => s.id !== id);
+        saveSnapshots(remaining);
+        renderList();
+        showSuccessToast(`Snapshot deleted: ${snapshotName}`);
+        return;
+      }
       return;
     }
 
@@ -493,7 +509,8 @@ export function openManagerModal(ui: UIHandlers): void {
       const isHidden = itemsEl.style.display === "none" || !itemsEl.style.display;
       if (isHidden) {
         itemsEl.style.display = "block";
-        setButtonLabel(btn, "Hide items");
+        setButtonLabel(btn, "Hide");
+        setButtonIcon(btn, "chart-down");
         const bodyEl = itemsEl.querySelector(".qs-items-body") as HTMLElement | null;
         if (bodyEl) {
           bodyEl.textContent = "Loading…";
@@ -508,7 +525,8 @@ export function openManagerModal(ui: UIHandlers): void {
         }
       } else {
         itemsEl.style.display = "none";
-        setButtonLabel(btn, "View items");
+        setButtonLabel(btn, "View");
+        setButtonIcon(btn, "chevron-right");
       }
       return;
     }
@@ -556,21 +574,6 @@ export function openManagerModal(ui: UIHandlers): void {
       } finally {
         exportingIds.delete(id);
       }
-      return;
-    }
-    if (action === "delete") {
-      const confirmDelete: ConfirmDialogResult = await showConfirmDialog({
-        title: "Delete snapshot",
-        message: "Delete this snapshot? This cannot be undone.",
-        confirmLabel: "Delete",
-        tone: "danger",
-      });
-      if (confirmDelete !== "confirm") return;
-      const snapshotName = getSnapshotDisplayName(snap);
-      const remaining = snapshots.filter(s => s.id !== id);
-      saveSnapshots(remaining);
-      renderList();
-      showSuccessToast(`Snapshot deleted: ${snapshotName}`);
       return;
     }
   };
