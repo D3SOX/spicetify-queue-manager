@@ -2,7 +2,7 @@
   {
     "name": "Queue Manager",
     "description": "Save snapshots of your queue, restore them later, export to playlists and more",
-    "preview": "https://github.com/user-attachments/assets/69747743-d1e9-4385-9031-f7b769836f8f",
+    "preview": "https://github.com/user-attachments/assets/7da407d1-26ec-459b-8105-4fb9b62c87ef",
     "main": "dist/queue-manager.js",
     "readme": "README.md",
     "tags": [
