@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.5.1
+
+- Fix manual snapshot getting saved with custom name when not changing it from the default
+
 ## 0.5
 
 - Import settings and snapshots
