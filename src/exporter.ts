@@ -7,6 +7,135 @@ import { APP_NAME } from "./appInfo";
 import { showPromptDialog } from "./dialogs";
 import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
 
+export async function updateQueueFromSnapshot(
+  snapshot: Snapshot,
+  mode: "append" | "replace",
+  buttonEl?: HTMLButtonElement,
+): Promise<void> {
+  const opName = mode === "replace" ? "Replace" : "Append to";
+  const opVerb = mode === "replace" ? "Replacing" : "Appending";
+  const opNoun = mode === "replace" ? "replace" : "append";
+
+  try {
+    if (!snapshot.items.length) {
+      showWarningToast("Snapshot is empty");
+      return;
+    }
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      setButtonLabel(buttonEl, `${opVerb}…`);
+    }
+
+    const itemsToQueue = snapshot.items.slice();
+    let playbackStarted = false;
+
+    if (mode === "replace") {
+      const first = itemsToQueue.shift()!;
+
+      try {
+        await Spicetify.Platform.PlayerAPI.clearQueue();
+      } catch (e) {
+        console.warn(`${APP_NAME}: clearQueue failed (non-fatal)`, e);
+      }
+
+      if (first.startsWith("spotify:local:")) {
+        try {
+          await Spicetify.Platform.PlayerAPI.play(
+            {
+              uri: "spotify:internal:local-files",
+              pages: [{ items: [{ uri: first }] }],
+            },
+            {},
+            { skipTo: { index: 0 } },
+          );
+          playbackStarted = true;
+        } catch (eLocal) {
+          console.warn(`${APP_NAME}: local fallback failed`, eLocal);
+        }
+      } else {
+        try {
+          await Spicetify.Player.playUri(first);
+          playbackStarted = true;
+        } catch (e1) {
+          try {
+            await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
+            playbackStarted = true;
+          } catch (e2) {
+            console.warn(`${APP_NAME}: failed to start first track`, e2);
+          }
+        }
+      }
+
+      if (!playbackStarted) {
+        throw new Error("Failed to start playback");
+      }
+
+      // Give the player a brief moment to switch track
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    // Enqueue remaining items in order
+    let addedToQueue = 0;
+    for (let i = 0; i < itemsToQueue.length; i += 100) {
+      const chunkUris = itemsToQueue.slice(i, i + 100);
+      const chunk = chunkUris.map(uri => ({ uri }));
+      try {
+        await Spicetify.Platform.PlayerAPI.addToQueue(chunk);
+        addedToQueue += chunk.length;
+      } catch (err) {
+        console.warn(`${APP_NAME}: addToQueue chunk failed`, err);
+        for (const uri of chunkUris) {
+          try {
+            await Spicetify.Platform.PlayerAPI.addToQueue([{ uri }]);
+            addedToQueue += 1;
+          } catch (singleErr) {
+            console.warn(`${APP_NAME}: addToQueue single failed`, { uri, error: singleErr });
+          }
+        }
+      }
+    }
+
+    const totalExpected = snapshot.items.length;
+    if (mode === "replace") {
+      const totalInQueue = (playbackStarted ? 1 : 0) + addedToQueue;
+      if (totalInQueue === totalExpected) {
+        showSuccessToast(`Queue replaced (${totalExpected} items)`);
+      } else {
+        showWarningToast(`Replaced; some items couldn't be queued (${totalInQueue}/${totalExpected})`);
+      }
+    } else {
+      // append
+      if (addedToQueue === totalExpected) {
+        showSuccessToast(`Added ${totalExpected} ${totalExpected === 1 ? "item" : "items"} to queue`);
+      } else if (addedToQueue > 0) {
+        showWarningToast(`Added ${addedToQueue}/${totalExpected} items to queue`);
+      } else {
+        showErrorToast("Failed to queue snapshot items");
+      }
+    }
+
+    try {
+      console.log(`${APP_NAME}: ${opName} result`, {
+        snapshotId: snapshot.id,
+        totalExpected,
+        added: mode === "replace" ? (playbackStarted ? 1 : 0) + addedToQueue : addedToQueue,
+      });
+    } catch {}
+  } catch (e) {
+    console.error(`${APP_NAME}: ${opNoun} queue failed`, e);
+    if (mode === "replace" && (e as Error)?.message === "Failed to start playback") {
+      showErrorToast("Failed to start playback");
+    } else {
+      showErrorToast(`Failed to ${opNoun} queue`);
+    }
+  } finally {
+    if (buttonEl) {
+      buttonEl.disabled = false;
+      setButtonLabel(buttonEl, `${opName} queue`);
+    }
+  }
+}
+
 export async function createManualSnapshot(): Promise<void> {
   try {
     const items = await getQueueFromSpicetify();
@@ -34,7 +163,7 @@ export async function createManualSnapshot(): Promise<void> {
     const snapshot: Snapshot = {
       id: generateId(),
       createdAt: Date.now(),
-      name,
+      name: name === defaultName ? undefined : name,
       type: "manual",
       items,
     };
@@ -125,153 +254,6 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     if (buttonEl) {
       buttonEl.disabled = false;
       setButtonLabel(buttonEl, "Export");
-    }
-  }
-}
-
-export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
-  try {
-    if (!snapshot.items.length) {
-      showWarningToast("Snapshot is empty");
-      return;
-    }
-
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      setButtonLabel(buttonEl, "Appending…");
-    }
-
-    const items = snapshot.items.slice();
-    let added = 0;
-
-    for (let i = 0; i < items.length; i += 100) {
-      const chunkUris = items.slice(i, i + 100);
-      const chunk = chunkUris.map(uri => ({ uri }));
-      try {
-        await Spicetify.Platform.PlayerAPI.addToQueue(chunk);
-        added += chunk.length;
-      } catch (err) {
-        console.warn(`${APP_NAME}: addToQueue chunk failed`, err);
-        for (const uri of chunkUris) {
-          try {
-            await Spicetify.Platform.PlayerAPI.addToQueue([{ uri }]);
-            added += 1;
-          } catch (singleErr) {
-            console.warn(`${APP_NAME}: addToQueue single failed`, { uri, error: singleErr });
-          }
-        }
-      }
-    }
-
-    const totalExpected = items.length;
-
-    if (added === totalExpected) {
-      showSuccessToast(`Added ${totalExpected} ${totalExpected === 1 ? "item" : "items"} to queue`);
-    } else if (added > 0) {
-      showWarningToast(`Added ${added}/${totalExpected} items to queue`);
-    } else {
-      showErrorToast("Failed to queue snapshot items");
-    }
-
-    try {
-      console.log(`${APP_NAME}: Append result`, {
-        snapshotId: snapshot.id,
-        totalExpected,
-        added,
-      });
-    } catch {}
-  } catch (e) {
-    console.error(`${APP_NAME}: append queue failed`, e);
-    showErrorToast("Failed to append to queue");
-  } finally {
-    if (buttonEl) {
-      buttonEl.disabled = false;
-      setButtonLabel(buttonEl, "Append to queue");
-    }
-  }
-}
-
-export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
-  try {
-    if (!snapshot.items.length) {
-      showWarningToast("Snapshot is empty");
-      return;
-    }
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      setButtonLabel(buttonEl, "Replacing…");
-    }
-
-    const items = snapshot.items.slice();
-    const first = items.shift()!;
-
-    try {
-      await Spicetify.Platform.PlayerAPI.clearQueue();
-    } catch (e) {
-      console.warn(`${APP_NAME}: clearQueue failed (non-fatal)`, e);
-    }
-
-    if (first.startsWith("spotify:local:")) {
-      try {
-        await Spicetify.Platform.PlayerAPI.play({
-          uri: "spotify:internal:local-files",
-          pages: [
-            {
-              items: [{ uri: first }],
-            },
-          ],
-        }, {}, {
-          skipTo: {
-            index: 0,
-          },
-        });
-      } catch (eLocal) {
-        console.warn(`${APP_NAME}: local fallback failed`, eLocal);
-        showErrorToast("Failed to start playback");
-        return;
-      }
-    } else {
-      // Start playback with the first item
-      try {
-        await Spicetify.Player.playUri(first);
-      } catch (e1) {
-        try {
-          await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
-        } catch (e2) {
-          console.warn(`${APP_NAME}: failed to start first track`, e2);
-          showErrorToast("Failed to start playback");
-          return;
-        }
-      }
-    }
-
-    // Give the player a brief moment to switch track
-    await new Promise(r => setTimeout(r, 250));
-
-    // Enqueue remaining items in order
-    let added = 0;
-    for (let i = 0; i < items.length; i += 100) {
-      const chunk = items.slice(i, i + 100).map(u => ({ uri: u }));
-      try {
-        await Spicetify.Platform.PlayerAPI.addToQueue(chunk);
-        added += chunk.length;
-      } catch (e) {
-        console.warn(`${APP_NAME}: addToQueue chunk failed`, e);
-      }
-    }
-
-    if (added === items.length) {
-      showSuccessToast(`Queue replaced (${snapshot.items.length} items)`);
-    } else {
-      showWarningToast(`Replaced; some items couldn't be queued (${added + 1}/${snapshot.items.length})`);
-    }
-  } catch (e) {
-    console.error(`${APP_NAME}: replace queue failed`, e);
-    showErrorToast("Failed to replace queue");
-  } finally {
-    if (buttonEl) {
-      buttonEl.disabled = false;
-      setButtonLabel(buttonEl, "Replace queue");
     }
   }
 } 
