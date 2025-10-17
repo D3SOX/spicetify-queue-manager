@@ -170,10 +170,9 @@
 }
 .qs-row-actions {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 2px 0;
-  overflow-x: auto;
 }
 .qs-row-actions .qs-btn {
   flex: 0 0 auto;
