@@ -1,7 +1,7 @@
 import "./ui.css";
 
 import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
-import { loadSnapshots, pruneAutosToMax, saveSnapshots } from "./storage";
+import { loadSnapshots, pruneAutosToMax, saveSnapshots, clearAutoSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon } from "./utils";
 import { showErrorToast, showSuccessToast } from "./toast";
@@ -9,7 +9,7 @@ import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
 import { appendSnapshotToQueue, replaceQueueWithSnapshot } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_NAME_SLUG, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
-import { showConfirmDialog, ConfirmDialogResult } from "./dialogs";
+import { showConfirmDialog } from "./dialogs";
 import { importSettings, importSnapshots } from "./importer";
 
 export type UIHandlers = {
@@ -263,6 +263,7 @@ function generateSectionsHTML(): string {
             ${renderBadge(String(autos.length), "accent")}
           </div>
           <div class="qs-actions">
+            ${renderButton("Clear all", "x", { id: "qs-clear-autos", tone: "danger" })}
             ${renderButton("Export all", "download", { id: "qs-export-autos", tone: "subtle" })}
           </div>
         </div>
@@ -443,6 +444,25 @@ export function openManagerModal(ui: UIHandlers): void {
       const data = snapshots.filter(s => s.type === "auto");
       return await downloadJson(`${APP_NAME_SLUG}-auto-snapshots.json`, data);
     }
+    if (clickedButton?.id === "qs-clear-autos") {
+      e.preventDefault();
+      const autoCount = snapshots.filter(s => s.type === "auto").length;
+      if (autoCount === 0) {
+        showErrorToast("No automatic snapshots to clear");
+        return;
+      }
+      const confirmClear = await showConfirmDialog({
+        title: "Clear automatic snapshots",
+        message: `Delete all ${autoCount} automatic snapshots? This cannot be undone.`,
+        confirmLabel: "Clear all",
+        tone: "danger",
+      });
+      if (confirmClear !== "confirm") return;
+      clearAutoSnapshots();
+      renderList();
+      showSuccessToast(`Cleared ${autoCount} automatic snapshots`);
+      return;
+    }
     if (clickedButton?.id === "qs-refresh") {
       e.preventDefault();
       renderSettings(ui);
@@ -482,7 +502,7 @@ export function openManagerModal(ui: UIHandlers): void {
         return;
       }
       if (actionAttr === "delete") {
-        const confirmDelete: ConfirmDialogResult = await showConfirmDialog({
+        const confirmDelete = await showConfirmDialog({
           title: "Delete snapshot",
           message: "Delete this snapshot? This cannot be undone.",
           confirmLabel: "Delete",

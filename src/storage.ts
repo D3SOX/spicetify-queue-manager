@@ -88,3 +88,9 @@ export function addSnapshot(newSnapshot: Snapshot, settings?: Settings): void {
     saveSnapshots([newSnapshot, ...manuals, ...autos]);
   }
 }
+
+export function clearAutoSnapshots(): void {
+  const existing = loadSnapshots();
+  const manuals = existing.filter(snap => snap.type === "manual");
+  saveSnapshots(manuals);
+}
