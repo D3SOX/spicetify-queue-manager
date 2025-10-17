@@ -153,6 +153,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
   let unsubscribe: (() => void) | null = null;
   let lastWarnRemaining: number | null = null;
   let lastWarnAt = 0;
+  let lastReportedSize: number | null = null;
   const warnCooldownMs = 30000;
 
   async function checkAndWarnOnce(): Promise<void> {
@@ -164,8 +165,16 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
       if (threshold < 0 || maxSize <= 1) return;
 
       const items = await getQueueFromSpicetify();
-      if (!items.length) return;
-      const remaining = Math.max(0, maxSize - items.length);
+      const currentSize = items.length;
+      
+      // Skip if queue size hasn't increased
+      if (lastReportedSize !== null && currentSize <= lastReportedSize) {
+        return;
+      }
+      lastReportedSize = currentSize;
+      
+      if (!currentSize) return;
+      const remaining = Math.max(0, maxSize - currentSize);
       if (remaining <= threshold) {
         const now = Date.now();
         if (lastWarnRemaining !== remaining || now - lastWarnAt >= warnCooldownMs) {
@@ -185,6 +194,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
       try { unsubscribe(); } catch {}
       unsubscribe = null;
     }
+    lastReportedSize = null;
   }
 
   function start(): void {
