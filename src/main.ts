@@ -3,6 +3,7 @@ import { loadSettings, saveSettings } from "./storage";
 import { openManagerModal, UIHandlers } from "./ui";
 import { createAutoManager, createQueueCapacityWatcher } from "./auto";
 import { APP_NAME } from "./appInfo";
+import { t } from "./i18n";
 
 async function main() {
   while (!Spicetify?.showNotification || !Spicetify?.CosmosAsync || !Spicetify?.LocalStorage) {
@@ -35,7 +36,7 @@ async function main() {
       new Spicetify.Topbar.Button(APP_NAME, icon, () => openManagerModal(uiHandlers), undefined, true);
     }
   } catch {
-    console.error(`${APP_NAME}: failed to add topbar button`);
+    console.error(`${APP_NAME}: ${t('errors.failedToAddTopbarButton')}`);
   }
 
   try {
@@ -60,7 +61,7 @@ async function main() {
     );
     item.register();
   } catch {
-    console.error(`${APP_NAME}: failed to add context menu item`);
+    console.error(`${APP_NAME}: ${t('errors.failedToAddContextMenuItem')}`);
   }
 
   try {
@@ -70,7 +71,7 @@ async function main() {
       alt: true,
     }, () => openManagerModal(uiHandlers));
   } catch {
-    console.error(`${APP_NAME}: failed to add keyboard shortcut`);
+    console.error(`${APP_NAME}: ${t('errors.failedToAddKeyboardShortcut')}`);
   }
 }
 

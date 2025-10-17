@@ -1,6 +1,6 @@
 import { APP_NAME } from "./appInfo";
 import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
-
+import { t } from "./i18n";
 export const DEFAULT_ICON_SIZE = 16;
 
 export function formatDateTime(ts: number): string {
@@ -84,7 +84,7 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
         return;
       } catch (err: any) {
         if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-          showWarningToast(`Export canceled (${err.name})`);
+          showWarningToast(t('toasts.exportCanceled', { reason: err.name }));
           return;
         }
       }
@@ -99,10 +99,10 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    showSuccessToast(`Exported ${filename} to Downloads folder`);
+    showSuccessToast(t('toasts.exportedToDownloads', { filename }));
   } catch (e) {
     console.warn(`${APP_NAME}: downloadJson failed`, e);
-    showErrorToast("Failed to export JSON");
+    showErrorToast(t('toasts.failedToExportJson'));
   }
 }
 
@@ -126,7 +126,7 @@ export async function uploadJson<T>(): Promise<T | null> {
         fileContent = await file.text();
       } catch (err: any) {
         if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-          showWarningToast(`Import canceled (${err.name})`);
+          showWarningToast(t('toasts.importCanceled', { reason: err.name }));
           return null;
         }
       }
@@ -166,7 +166,7 @@ export async function uploadJson<T>(): Promise<T | null> {
     return data as T;
   } catch (e) {
     console.warn(`${APP_NAME}: uploadJson failed`, e);
-    showErrorToast("Failed to import JSON");
+    showErrorToast(t('toasts.failedToImportJson'));
     return null;
   }
 }

@@ -1,4 +1,5 @@
 import { ButtonTone } from "./types";
+import { t } from "./i18n";
 
 type ConfirmDialogOptions = {
   title: string;
@@ -45,7 +46,7 @@ type ConfirmDialogResult = "confirm" | "cancel" | "extra";
 export function showConfirmDialog(options: ConfirmDialogOptions): Promise<ConfirmDialogResult> {
   if (dialogOpen) return Promise.resolve("cancel");
   dialogOpen = true;
-  const { title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", tone = "default", extraLabel, extraTone = "subtle" } = options;
+  const { title, message, confirmLabel = t('ui.buttons.confirm'), cancelLabel = t('ui.buttons.cancel'), tone = "default", extraLabel, extraTone = "subtle" } = options;
 
   return new Promise(resolve => {
     const backdrop = createBackdrop();
@@ -144,8 +145,8 @@ export function showPromptDialog(options: PromptDialogOptions): Promise<string |
   const {
     title,
     message,
-    confirmLabel = "Confirm",
-    cancelLabel = "Cancel",
+    confirmLabel = t('ui.buttons.confirm'),
+    cancelLabel = t('ui.buttons.cancel'),
     tone = "default",
     defaultValue = "",
     placeholder,

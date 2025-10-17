@@ -11,6 +11,7 @@ import { APP_CHANNEL, APP_NAME, APP_NAME_SLUG, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
 import { showConfirmDialog } from "./dialogs";
 import { importSettings, importSnapshots } from "./importer";
+import { t } from "./i18n";
 
 export type UIHandlers = {
   getSettings: () => Settings;
@@ -77,7 +78,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
   input.type = "text";
   input.value = snapshot.name ?? originalLabel;
   input.className = "qs-inline-input";
-  input.setAttribute("aria-label", "Snapshot name");
+  input.setAttribute("aria-label", t('ui.labels.snapshotName'));
   textSpan.style.display = "none";
   if (actionsEl) {
     actionsEl.style.display = "none";
@@ -91,7 +92,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
     if (save) {
       const newValue = state.input.value.trim();
       if (!newValue) {
-        showErrorToast("Name cannot be empty", { duration: 2000 });
+        showErrorToast(t('toasts.nameCannotBeEmpty'), { duration: 2000 });
         beginInlineRename(rowEl, snapshot);
         return;
       }
@@ -100,7 +101,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
         return;
       }
       if (newValue === state.generatedName) {
-        showErrorToast("Name must differ from the default suggestion", { duration: 2000 });
+        showErrorToast(t('toasts.nameMustDifferFromDefault'), { duration: 2000 });
         return;
       }
       const snapshots = loadSnapshots();
@@ -191,10 +192,10 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
       const label = escapeHtml(getSnapshotDisplayName(s));
       const hasLocal = s.items.some(u => u.startsWith("spotify:local:"));
       const metaParts = [
-        renderBadge(`${s.items.length} ${s.items.length === 1 ? "item" : "items"}`, "accent"),
+        renderBadge(`${s.items.length} ${s.items.length === 1 ? t('ui.itemSingular') : t('ui.itemPlural')}`, "accent"),
       ];
       if (hasLocal) {
-        metaParts.push(renderBadge("includes local"));
+        metaParts.push(renderBadge(t('ui.includesLocal')));
       }
       const meta = metaParts.join("");
       return `
@@ -204,22 +205,22 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
                 ${getIconMarkup(s.type === "auto" ? "clock" : "playlist")}
                 <span>${label}</span>
                 <span class="qs-title-actions">
-                  ${renderActionIconButton("rename", "edit", "Rename snapshot")}
-                  ${s.name ? renderActionIconButton("reset-name", "repeat", "Reset name") : ""}
-                  ${renderActionIconButton("delete", "x", "Delete snapshot", { tone: "danger" })}
+                  ${renderActionIconButton("rename", "edit", t('ui.labels.renameSnapshot'))}
+                  ${s.name ? renderActionIconButton("reset-name", "repeat", t('ui.labels.resetName')) : ""}
+                  ${renderActionIconButton("delete", "x", t('ui.labels.deleteSnapshot'), { tone: "danger" })}
                 </span>
               </div>
               <div class="qs-row-meta">${meta}</div>
               <div class="qs-row-actions">
-                ${renderButton("View", "chevron-right", { action: "toggle-items", title: "Toggle items" })}
-                ${renderButton("Replace queue", "skip-forward", { action: "replace-queue", title: "Replace queue", tone: "primary" })}
-                ${renderButton("Append to queue", "plus-alt", { action: "append-queue", title: "Append to queue" })}
-                ${renderButton("Export", "download", { action: "export", title: "Export to playlist" })}
+                ${renderButton(t('ui.buttons.view'), "chevron-right", { action: "toggle-items", title: t('ui.labels.toggleItems') })}
+                ${renderButton(t('ui.buttons.replaceQueue'), "skip-forward", { action: "replace-queue", title: t('ui.labels.replaceQueue'), tone: "primary" })}
+                ${renderButton(t('ui.buttons.appendToQueue'), "plus-alt", { action: "append-queue", title: t('ui.labels.appendQueue') })}
+                ${renderButton(t('ui.buttons.export'), "download", { action: "export", title: t('ui.labels.exportToPlaylist') })}
               </div>
             </div>
           </div>
           <div class="qs-items" data-id="${s.id}" style="display:none">
-            <div class="qs-items-body">Loading…</div>
+            <div class="qs-items-body">${t('ui.loading')}</div>
           </div>
         `;
     })
@@ -237,38 +238,38 @@ function generateSectionsHTML(): string {
         <div class="qs-section-head">
           <div class="qs-section-heading">
             ${getIconMarkup("playlist")}
-            <div class="qs-section-text">
-              <div class="qs-section-name">Manual Snapshots</div>
-              <div class="qs-section-caption">Your saved queues for later</div>
-            </div>
             ${renderBadge(String(manuals.length), "accent")}
+            <div class="qs-section-text">
+              <div class="qs-section-name">${t('ui.sections.manualSnapshots')}</div>
+              <div class="qs-section-caption">${t('ui.sections.manualSnapshotsCaption')}</div>
+            </div>
           </div>
           <div class="qs-actions">
-            ${renderButton("Export all", "download", { id: "qs-export-manuals", tone: "subtle" })}
-            ${renderButton("Save now", "plus-alt", { id: "qs-new-manual", tone: "primary" })}
+            ${renderButton(t('ui.buttons.exportAll'), "download", { id: "qs-export-manuals", tone: "subtle" })}
+            ${renderButton(t('ui.buttons.saveNow'), "plus-alt", { id: "qs-new-manual", tone: "primary" })}
           </div>
         </div>
         <div class="qs-section-body">
-          ${manualRows || '<div class="qs-empty">No manual snapshots yet</div>'}
+          ${manualRows || `<div class="qs-empty">${t('ui.empty.noManualSnapshots')}</div>`}
         </div>
       </div>
       <div class="qs-section-card">
         <div class="qs-section-head">
           <div class="qs-section-heading">
             ${getIconMarkup("clock")}
-            <div class="qs-section-text">
-              <div class="qs-section-name">Automatic Snapshots</div>
-              <div class="qs-section-caption">Captured in the background</div>
-            </div>
             ${renderBadge(String(autos.length), "accent")}
+            <div class="qs-section-text">
+              <div class="qs-section-name">${t('ui.sections.automaticSnapshots')}</div>
+              <div class="qs-section-caption">${t('ui.sections.automaticSnapshotsCaption')}</div>
+            </div>
           </div>
           <div class="qs-actions">
-            ${renderButton("Clear all", "x", { id: "qs-clear-autos", tone: "danger" })}
-            ${renderButton("Export all", "download", { id: "qs-export-autos", tone: "subtle" })}
+            ${renderButton(t('ui.buttons.clearAll'), "x", { id: "qs-clear-autos", tone: "danger" })}
+            ${renderButton(t('ui.buttons.exportAll'), "download", { id: "qs-export-autos", tone: "subtle" })}
           </div>
         </div>
         <div class="qs-section-body">
-          ${autoRows || '<div class="qs-empty">No automatic snapshots yet</div>'}
+          ${autoRows || `<div class="qs-empty">${t('ui.empty.noAutomaticSnapshots')}</div>`}
         </div>
       </div>
     `;
@@ -281,52 +282,52 @@ function generateSettingsHTML(s: Settings): string {
             <div class="qs-section-heading">
               ${getIconMarkup("grid-view")}
               <div class="qs-section-text">
-                <div class="qs-section-name">Settings</div>
-                <div class="qs-section-caption">Tune automation and queue alerts</div>
+                <div class="qs-section-name">${t('ui.sections.settings')}</div>
+                  <div class="qs-section-caption">${t('ui.sections.settingsCaption')}</div>
               </div>
             </div>
           </div>
           <div class="qs-setting">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> ${getIconMarkup("brightness")}Enable automatic snapshots</label>
-            <div class="qs-dim">Mode 
+              <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> ${getIconMarkup("brightness")}${t('settings.autoEnabled')}</label>
+            <div class="qs-dim">${t('settings.autoMode')} 
               <div class="qs-radio-group" id="qs-auto-mode-group">
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} Time-based</span></label>
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} Queue changes</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">Experimental!</span>This mode may create many similar snapshots (for example when queuing a bunch of songs)</span></span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} ${t('settings.timeBased')}</span></label>
+                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} ${t('settings.queueChanges')}</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">${t('settings.experimental')}</span>${t('settings.experimentalTooltip')}</span></span></label>
               </div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> ${getIconMarkup("search")} Check for new items</label>
-              <div style="opacity:0.7; font-size:12px">Only trigger it when there is a new song that was not in the previous snapshot.</div>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> ${getIconMarkup("search")} ${t('settings.onlyNewItems')}</label>
+              <div style="opacity:0.7; font-size:12px">${t('settings.onlyNewItemsDescription')}</div>
             </div>
             <div class="qs-setting" style="margin-top:6px">
-              <div style="opacity:0.7; font-size:12px">Equal queues are never saved as automatic snapshots.</div>
+              <div style="opacity:0.7; font-size:12px">${t('settings.equalQueuesNote')}</div>
             </div>
             <div class="qs-setting" style="margin-top:12px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} Warn when queue is nearly full</label>
-              <div style="opacity:0.7; font-size:12px">Heuristic limit; includes current track. Adjust if needed.</div>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnEnabled')}</label>
+              <div style="opacity:0.7; font-size:12px">${t('settings.queueWarnDescription')}</div>
             </div>
             <div class="qs-setting" style="margin-top:12px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-prompt-manual-before-replace" ${s.promptManualBeforeReplace ? "checked" : ""}/> ${getIconMarkup("copy")} Ask to save manual snapshot before replacing queue</label>
-              <div style="opacity:0.7; font-size:12px">Offers to store the current queue before overwriting it.</div>
+              <label class="qs-checkbox"><input type="checkbox" id="qs-prompt-manual-before-replace" ${s.promptManualBeforeReplace ? "checked" : ""}/> ${getIconMarkup("copy")} ${t('settings.promptManualBeforeReplace')}</label>
+              <div style="opacity:0.7; font-size:12px">${t('settings.promptManualDescription')}</div>
             </div>
           </div>
           <div class="qs-right">
             <div class="qs-setting">
-              <label>${getIconMarkup("clock")} Interval (minutes)</label>
+              <label>${getIconMarkup("clock")} ${t('settings.interval')}</label>
               <input class="qs-input" type="number" id="qs-auto-interval-mins" min="0.5" step="0.5" value="${(s.autoIntervalMs / 60000).toFixed(2)}" ${s.autoEnabled && s.autoMode === "timer" ? "" : "disabled"} />
-              <div style="opacity:0.7; font-size:12px">Minimum 0.5 (30 seconds)</div>
+              <div style="opacity:0.7; font-size:12px">${t('settings.intervalDescription')}</div>
             </div>
             <div class="qs-setting">
-              <label>${getIconMarkup("chart-up")} Max automatic snapshots</label>
+              <label>${getIconMarkup("chart-up")} ${t('settings.maxAutomaticSnapshots')}</label>
               <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
-              <div style="opacity:0.7; font-size:12px">Older snapshots are pruned. Be careful when changing this</div>
+              <div style="opacity:0.7; font-size:12px">${t('settings.maxAutomaticDescription')}</div>
             </div>
             <div class="qs-setting">
-              <label>${getIconMarkup("queue")} Queue max size</label>
+              <label>${getIconMarkup("queue")} ${t('settings.queueMaxSize')}</label>
               <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize}" ${s.queueWarnEnabled ? "" : "disabled"} />
             </div>
             <div class="qs-setting">
-              <label>${getIconMarkup("exclamation-circle")} Warn when remaining slots ≤</label>
+              <label>${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnThreshold')}</label>
               <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold}" ${s.queueWarnEnabled ? "" : "disabled"} />
             </div>
           </div>
@@ -355,16 +356,16 @@ export function openManagerModal(ui: UIHandlers): void {
             <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
             <span class="qs-header-badges">${versionBadge}${channelBadge}</span>
           </div>
-          <div class="qs-actions">
-            ${renderButton("Refresh", "repeat", { id: "qs-refresh", tone: "subtle" })}
-            ${renderButton("Export settings", "download", { id: "qs-export-settings", title: "Export settings to a JSON file" })}
-            ${renderButton("Import snapshots", "chart-up", { id: "qs-import-snapshots", title: "Import snapshots from a JSON file" })}
-            ${renderButton("Import settings", "chart-up", { id: "qs-import-settings", title: "Import settings from a JSON file" })}
+          <div class="qs-header-actions">
+            ${renderButton(t('ui.buttons.refresh'), "repeat", { id: "qs-refresh", tone: "subtle" })}
+            ${renderButton(t('ui.buttons.exportSettings'), "download", { id: "qs-export-settings", title: t('ui.labels.exportSettings') })}
+            ${renderButton(t('ui.buttons.importSnapshots'), "chart-up", { id: "qs-import-snapshots", title: t('ui.labels.importSnapshots') })}
+            ${renderButton(t('ui.buttons.importSettings'), "chart-up", { id: "qs-import-settings", title: t('ui.labels.importSettings') })}
           </div>
         </div>
         ${settingsHTML}
         <div id="qs-list">
-          ${sections || '<div style="opacity:0.7">No snapshots yet</div>'}
+          ${sections || `<div style="opacity:0.7">${t('ui.empty.noSnapshots')}</div>`}
         </div>
       </div>
     `;
@@ -448,19 +449,19 @@ export function openManagerModal(ui: UIHandlers): void {
       e.preventDefault();
       const autoCount = snapshots.filter(s => s.type === "auto").length;
       if (autoCount === 0) {
-        showErrorToast("No automatic snapshots to clear");
+        showErrorToast(t('toasts.noAutomaticSnapshotsToClear'));
         return;
       }
       const confirmClear = await showConfirmDialog({
-        title: "Clear automatic snapshots",
-        message: `Delete all ${autoCount} automatic snapshots? This cannot be undone.`,
-        confirmLabel: "Clear all",
+        title: t('dialogs.clearAutomaticSnapshots.title'),
+        message: t('dialogs.clearAutomaticSnapshots.message', { count: autoCount }),
+        confirmLabel: t('dialogs.clearAutomaticSnapshots.confirmLabel'),
         tone: "danger",
       });
       if (confirmClear !== "confirm") return;
       clearAutoSnapshots();
       renderList();
-      showSuccessToast(`Cleared ${autoCount} automatic snapshots`);
+      showSuccessToast(t('toasts.clearedAutomaticSnapshots', { count: autoCount }));
       return;
     }
     if (clickedButton?.id === "qs-refresh") {
@@ -503,9 +504,9 @@ export function openManagerModal(ui: UIHandlers): void {
       }
       if (actionAttr === "delete") {
         const confirmDelete = await showConfirmDialog({
-          title: "Delete snapshot",
-          message: "Delete this snapshot? This cannot be undone.",
-          confirmLabel: "Delete",
+          title: t('dialogs.deleteSnapshot.title'),
+          message: t('dialogs.deleteSnapshot.message'),
+          confirmLabel: t('dialogs.deleteSnapshot.confirmLabel'),
           tone: "danger",
         });
         if (confirmDelete !== "confirm") return;
@@ -513,7 +514,7 @@ export function openManagerModal(ui: UIHandlers): void {
         const remaining = snapshots.filter(s => s.id !== id);
         saveSnapshots(remaining);
         renderList();
-        showSuccessToast(`Snapshot deleted: ${snapshotName}`);
+        showSuccessToast(t('toasts.snapshotDeleted', { name: snapshotName }));
         return;
       }
       return;
@@ -529,23 +530,23 @@ export function openManagerModal(ui: UIHandlers): void {
       const isHidden = itemsEl.style.display === "none" || !itemsEl.style.display;
       if (isHidden) {
         itemsEl.style.display = "block";
-        setButtonLabel(btn, "Hide");
+        setButtonLabel(btn, t('ui.buttons.hide'));
         setButtonIcon(btn, "chart-down");
         const bodyEl = itemsEl.querySelector(".qs-items-body") as HTMLElement | null;
         if (bodyEl) {
-          bodyEl.textContent = "Loading…";
+          bodyEl.textContent = t('ui.loading');
           try {
             const names = await getSnapshotItemNames(snap);
             bodyEl.innerHTML = names
               .map((n, i) => `<div>${i + 1}. ${escapeHtml(n)}</div>`)
               .join("");
           } catch (err) {
-            bodyEl.textContent = "Failed to load items";
+            bodyEl.textContent = t('ui.failedToLoadItems');
           }
         }
       } else {
         itemsEl.style.display = "none";
-        setButtonLabel(btn, "View");
+        setButtonLabel(btn, t('ui.buttons.view'));
         setButtonIcon(btn, "chevron-right");
       }
       return;
@@ -574,11 +575,11 @@ export function openManagerModal(ui: UIHandlers): void {
         const settings = ui.getSettings();
         if (settings.promptManualBeforeReplace) {
           const shouldSave = await showConfirmDialog({
-            title: "Save current queue?",
-            message: "Create a manual snapshot of the current queue before replacing it?",
-            confirmLabel: "Save snapshot",
-            cancelLabel: "Skip",
-            extraLabel: "Cancel",
+            title: t('dialogs.saveCurrentQueue.title'),
+            message: t('dialogs.saveCurrentQueue.message'),
+            confirmLabel: t('dialogs.saveCurrentQueue.confirmLabel'),
+            cancelLabel: t('dialogs.saveCurrentQueue.cancelLabel'),
+            extraLabel: t('dialogs.saveCurrentQueue.extraLabel'),
             extraTone: "danger",
             tone: "primary",
           });
@@ -699,6 +700,6 @@ export function renderList(): void {
   const listEl = document.getElementById("qs-list");
   if (listEl) {
     const sections = generateSectionsHTML();
-    listEl.innerHTML = sections || '<div style="opacity:0.7">No snapshots yet</div>';
+    listEl.innerHTML = sections || `<div style="opacity:0.7">${t('ui.empty.noSnapshots')}</div>`;
   }
 }

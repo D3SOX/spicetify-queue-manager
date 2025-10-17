@@ -1,6 +1,7 @@
 import "./toast.css";
 
 import { APP_NAME } from "./appInfo";
+import { t } from "./i18n";
 
 export type ToastTone = "default" | "success" | "danger" | "warning";
 
@@ -312,7 +313,7 @@ export function showToast(message: string | HTMLElement, options: ToastOptions =
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "qs-toast-close";
-  closeBtn.setAttribute("aria-label", "Dismiss notification");
+  closeBtn.setAttribute("aria-label", t('ui.buttons.cancel'));
   closeBtn.innerHTML = "&times;";
   closeBtn.addEventListener("click", e => {
     e.preventDefault();

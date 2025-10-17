@@ -6,20 +6,21 @@ import { generateId, setButtonLabel } from "./utils";
 import { APP_NAME } from "./appInfo";
 import { showPromptDialog } from "./dialogs";
 import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
+import { t } from "./i18n";
 
 export async function createManualSnapshot(): Promise<void> {
   try {
     const items = await getQueueFromSpicetify();
     if (!items.length) {
-      showWarningToast("No queue found. If you believe this is an error, please try to play and pause a track.");
+      showWarningToast(t('toasts.noQueueFound'));
       return;
     }
     const defaultName = getSnapshotGeneratedNameFor({ type: "manual", createdAt: Date.now() });
     const name = (await showPromptDialog({
-      title: "Save snapshot",
-      message: "Name this snapshot",
-      confirmLabel: "Save",
-      cancelLabel: "Cancel",
+      title: t('dialogs.saveSnapshot.title'),
+      message: t('dialogs.saveSnapshot.message'),
+      confirmLabel: t('dialogs.saveSnapshot.confirmLabel'),
+      cancelLabel: t('dialogs.saveSnapshot.cancelLabel'),
       defaultValue: defaultName,
     }))?.trim() ?? null;
 
@@ -27,7 +28,7 @@ export async function createManualSnapshot(): Promise<void> {
       // canceled
       return;
     } else if (name === '') {
-      showErrorToast("Snapshot not saved (name cannot be empty)");
+      showErrorToast(t('toasts.nameCannotBeEmpty'));
       return;
     }
 
@@ -39,23 +40,23 @@ export async function createManualSnapshot(): Promise<void> {
       items,
     };
     addSnapshot(snapshot);
-    showSuccessToast("Snapshot saved");
+    showSuccessToast(t('toasts.snapshotSaved'));
   } catch (e) {
     console.error(`${APP_NAME}: manual snapshot failed`, e);
-    showErrorToast("Failed to save snapshot");
+    showErrorToast(t('toasts.failedToSaveSnapshot'));
   }
 }
 
 export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
   try {
     if (!snapshot.items.length) {
-      showWarningToast("Nothing to export");
+      showWarningToast(t('toasts.nothingToExport'));
       return;
     }
 
     if (buttonEl) {
       buttonEl.disabled = true;
-      setButtonLabel(buttonEl, "Exporting…");
+      setButtonLabel(buttonEl, t('snapshots.actions.exporting'));
     }
 
     const me = await Spicetify.CosmosAsync.get("https://api.spotify.com/v1/me");
@@ -90,7 +91,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     const allAdded = totalAdded === totalExpected;
 
     if (allAdded) {
-      showSuccessToast(`Exported to ${playlistName}`);
+      showSuccessToast(t('toasts.exportedToPlaylist', { name: playlistName }));
       try {
         const uri = Spicetify.URI.playlistV2URI(playlistId);
         const path = uri?.toURLPath(true);
@@ -108,7 +109,7 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
         }
       } catch {}
     } else {
-      showWarningToast(`Exported; some tracks couldn't be added (${totalAdded}/${totalExpected})`);
+      showWarningToast(t('toasts.exportResult', { added: totalAdded, total: totalExpected }));
     }
 
     try {
@@ -120,11 +121,11 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
     } catch {}
   } catch (e) {
     console.error(`${APP_NAME}: export failed`, e);
-    showErrorToast("Failed to export to playlist");
+    showErrorToast(t('toasts.failedToExport'));
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;
-      setButtonLabel(buttonEl, "Export");
+      setButtonLabel(buttonEl, t('ui.buttons.export'));
     }
   }
 }
@@ -132,13 +133,13 @@ export async function exportSnapshotToPlaylist(snapshot: Snapshot, buttonEl?: HT
 export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
   try {
     if (!snapshot.items.length) {
-      showWarningToast("Snapshot is empty");
+      showWarningToast(t('toasts.snapshotEmpty'));
       return;
     }
 
     if (buttonEl) {
       buttonEl.disabled = true;
-      setButtonLabel(buttonEl, "Appending…");
+      setButtonLabel(buttonEl, t('snapshots.actions.appending'));
     }
 
     // Filter out items that are already present in the current queue
@@ -147,7 +148,7 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
     const items = snapshot.items.filter(u => !existingSet.has(u));
 
     if (!items.length) {
-      showWarningToast("All snapshot items are already in the queue");
+      showWarningToast(t('toasts.allItemsAlreadyInQueue'));
       return;
     }
     let added = 0;
@@ -174,11 +175,11 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
     const totalExpected = items.length;
 
     if (added === totalExpected) {
-      showSuccessToast(`Added ${totalExpected} ${totalExpected === 1 ? "item" : "items"} to queue`);
+      showSuccessToast(t('toasts.addedToQueue', { count: totalExpected, plural: totalExpected === 1 ? t('ui.itemSingular') : t('ui.itemPlural') }));
     } else if (added > 0) {
-      showWarningToast(`Added ${added}/${totalExpected} items to queue`);
+      showWarningToast(t('toasts.appendResult', { added, total: totalExpected }));
     } else {
-      showErrorToast("Failed to queue snapshot items");
+      showErrorToast(t('toasts.failedToAppend'));
     }
 
     try {
@@ -190,11 +191,11 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
     } catch {}
   } catch (e) {
     console.error(`${APP_NAME}: append queue failed`, e);
-    showErrorToast("Failed to append to queue");
+    showErrorToast(t('toasts.failedToAppend'));
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;
-      setButtonLabel(buttonEl, "Append to queue");
+      setButtonLabel(buttonEl, t('ui.buttons.appendToQueue'));
     }
   }
 }
@@ -202,12 +203,12 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
 export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
   try {
     if (!snapshot.items.length) {
-      showWarningToast("Snapshot is empty");
+      showWarningToast(t('toasts.snapshotEmpty'));
       return;
     }
     if (buttonEl) {
       buttonEl.disabled = true;
-      setButtonLabel(buttonEl, "Replacing…");
+      setButtonLabel(buttonEl, t('snapshots.actions.replacing'));
     }
 
     const items = snapshot.items.slice();
@@ -235,7 +236,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
         });
       } catch (eLocal) {
         console.warn(`${APP_NAME}: local fallback failed`, eLocal);
-        showErrorToast("Failed to start playback");
+        showErrorToast(t('toasts.failedToStartPlayback'));
         return;
       }
     } else {
@@ -247,7 +248,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
           await Spicetify.Platform.PlayerAPI.play({ uri: first }, {}, {});
         } catch (e2) {
           console.warn(`${APP_NAME}: failed to start first track`, e2);
-          showErrorToast("Failed to start playback");
+          showErrorToast(t('toasts.failedToStartPlayback'));
           return;
         }
       }
@@ -269,17 +270,17 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     }
 
     if (added === items.length) {
-      showSuccessToast(`Queue replaced (${snapshot.items.length} items)`);
+      showSuccessToast(t('toasts.queueReplaced', { count: snapshot.items.length }));
     } else {
-      showWarningToast(`Replaced; some items couldn't be queued (${added + 1}/${snapshot.items.length})`);
+      showWarningToast(t('toasts.replaceResult', { added: added + 1, total: snapshot.items.length }));
     }
   } catch (e) {
     console.error(`${APP_NAME}: replace queue failed`, e);
-    showErrorToast("Failed to replace queue");
+    showErrorToast(t('toasts.failedToReplace'));
   } finally {
     if (buttonEl) {
       buttonEl.disabled = false;
-      setButtonLabel(buttonEl, "Replace queue");
+      setButtonLabel(buttonEl, t('ui.buttons.replaceQueue'));
     }
   }
 } 

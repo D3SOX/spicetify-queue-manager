@@ -4,6 +4,7 @@ import { areQueuesEqual, generateId } from "./utils";
 import { addSnapshot, getSortedSnapshots, loadSnapshots, pruneAutosToMax as storagePruneAutosToMax } from "./storage";
 import { APP_NAME } from "./appInfo";
 import { showErrorToast, showWarningToast } from "./toast";
+import { t } from "./i18n";
 
 
 export function createAutoManager(getSettings: () => Settings) {
@@ -59,7 +60,7 @@ export function createAutoManager(getSettings: () => Settings) {
       lastSnapshotItems = currentItems;
     } catch (e) {
       console.error(`${APP_NAME}: auto snapshot error`, e);
-      showErrorToast("Failed to save an automatic snapshot");
+      showErrorToast(t('toasts.failedToSaveAutomatic'));
     }
   }
 
@@ -108,7 +109,7 @@ export function createAutoManager(getSettings: () => Settings) {
       });
     } catch (e) {
       console.error(`${APP_NAME}: failed to start queue update watcher`, e);
-      showErrorToast("Failed to start queue update watcher");
+      showErrorToast(t('toasts.failedToStartQueueWatcher'));
     }
   }
 
@@ -179,7 +180,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
         const now = Date.now();
         if (lastWarnRemaining !== remaining || now - lastWarnAt >= warnCooldownMs) {
           const used = maxSize - remaining;
-          showWarningToast(`Queue nearly full (${used}/${maxSize})`, { duration: 250000, id: "queue-nearly-full" });
+          showWarningToast(t('toasts.queueNearlyFull', { used, max: maxSize }), { duration: 250000, id: "queue-nearly-full" });
           lastWarnRemaining = remaining;
           lastWarnAt = now;
         }
@@ -222,7 +223,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
       checkAndWarnOnce();
     } catch (e) {
       console.error(`${APP_NAME}: failed to start capacity watcher`, e);
-      showErrorToast("Failed to start capacity watcher");
+      showErrorToast(t('toasts.failedToStartCapacityWatcher'));
     }
   }
 

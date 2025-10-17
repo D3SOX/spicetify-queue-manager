@@ -5,6 +5,7 @@ import { Settings, Snapshot } from "./types";
 import { uploadJson } from "./utils";
 import { renderList, renderSettings } from "./ui";
 import { UIHandlers } from "./ui";
+import { t } from "./i18n";
 
 function isValidSnapshot(s: any): s is Snapshot {
     return s && typeof s.id === "string" && typeof s.createdAt === "number" && (s.type === "auto" || s.type === "manual") && Array.isArray(s.items) && s.items.every((i: any) => typeof i === "string");
@@ -22,11 +23,11 @@ export async function importSnapshots(): Promise<void> {
     const validSnaps = snapsToImport.filter(isValidSnapshot);
 
     if (validSnaps.length !== snapsToImport.length) {
-        showErrorToast("Some imported snapshots were invalid and have been skipped.");
+        showErrorToast(t('toasts.someImportedSnapshotsInvalid'));
     }
 
     if (!validSnaps.length) {
-        showErrorToast("No valid snapshots to import.");
+        showErrorToast(t('toasts.noValidSnapshotsToImport'));
         return;
     }
 
@@ -35,14 +36,14 @@ export async function importSnapshots(): Promise<void> {
     const newSnaps = validSnaps.filter(s => !existingIds.has(s.id));
 
     if (!newSnaps.length) {
-        showSuccessToast("All snapshots already exist.");
+        showSuccessToast(t('toasts.allSnapshotsAlreadyExist'));
         return;
     }
 
     const updated: Snapshot[] = [...existing, ...newSnaps];
     saveSnapshots(updated);
     renderList();
-    showSuccessToast(`Imported ${newSnaps.length} new ${newSnaps.length === 1 ? "snapshot" : "snapshots"}.`);
+    showSuccessToast(t('toasts.snapshotsImported', { count: newSnaps.length, plural: newSnaps.length === 1 ? "snapshot" : "snapshots" }));
 }
 
 export async function importSettings(ui: UIHandlers): Promise<void> {
@@ -50,14 +51,14 @@ export async function importSettings(ui: UIHandlers): Promise<void> {
     if (!data) return;
 
     if (!isValidSettings(data)) {
-        showErrorToast("Invalid settings file format.");
+        showErrorToast(t('toasts.invalidSettingsFile'));
         return;
     }
 
     const confirmed = await showConfirmDialog({
-        title: "Import Settings",
-        message: "This will overwrite your current settings. Are you sure?",
-        confirmLabel: "Import",
+        title: t('dialogs.importSettings.title'),
+        message: t('dialogs.importSettings.message'),
+        confirmLabel: t('dialogs.importSettings.confirmLabel'),
         tone: "danger",
     });
 
@@ -67,5 +68,5 @@ export async function importSettings(ui: UIHandlers): Promise<void> {
 
     ui.setSettings(data);
     renderSettings(ui);
-    showSuccessToast("Settings imported successfully.");
+    showSuccessToast(t('toasts.settingsImported'));
 }

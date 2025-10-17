@@ -58,6 +58,17 @@
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+.qs-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  max-width: 400px;
+}
+.qs-header-actions .qs-btn {
+  flex: 0 0 auto;
+  max-width: calc(50% - 4px);
+}
 .qs-settings {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -448,6 +459,14 @@
   .qs-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+  .qs-header-actions {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+  .qs-header-actions .qs-btn {
+    max-width: 100%;
   }
   .qs-row {
     grid-template-columns: 1fr;
