@@ -11,7 +11,7 @@ import { APP_CHANNEL, APP_NAME, APP_NAME_SLUG, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
 import { showConfirmDialog } from "./dialogs";
 import { importSettings, importSnapshots } from "./importer";
-import { t } from "./i18n";
+import { t, refreshLocale } from "./i18n";
 
 export type UIHandlers = {
   getSettings: () => Settings;
@@ -309,6 +309,17 @@ function generateSettingsHTML(s: Settings): string {
             <div class="qs-setting" style="margin-top:12px">
               <label class="qs-checkbox"><input type="checkbox" id="qs-prompt-manual-before-replace" ${s.promptManualBeforeReplace ? "checked" : ""}/> ${getIconMarkup("copy")} ${t('settings.promptManualBeforeReplace')}</label>
               <div style="opacity:0.7; font-size:12px">${t('settings.promptManualDescription')}</div>
+            </div>
+            <div class="qs-setting" style="margin-top:12px">
+              <label>${getIconMarkup("search")} ${t('settings.language')}</label>
+              <select class="qs-input" id="qs-language">
+                <option value="" ${!s.language ? "selected" : ""}>${t('settings.autoDetected')}</option>
+                <option value="en" ${s.language === "en" ? "selected" : ""}>English</option>
+                <option value="de" ${s.language === "de" ? "selected" : ""}>Deutsch</option>
+                <option value="es" ${s.language === "es" ? "selected" : ""}>Español</option>
+                <option value="fr" ${s.language === "fr" ? "selected" : ""}>Français</option>
+              </select>
+              <div style="opacity:0.7; font-size:12px">${t('settings.languageDescription')}</div>
             </div>
           </div>
           <div class="qs-right">
@@ -685,6 +696,17 @@ export function openManagerModal(ui: UIHandlers): void {
       const s0 = ui.getSettings();
       const newSettings: Settings = { ...s0, promptManualBeforeReplace };
       ui.setSettings(newSettings);
+      return;
+    }
+    if (target.id === "qs-language") {
+      const select = target as HTMLSelectElement;
+      const language = select.value || undefined;
+      const s0 = ui.getSettings();
+      const newSettings: Settings = { ...s0, language };
+      ui.setSettings(newSettings);
+      refreshLocale();
+      renderSettings(ui);
+      renderList();
       return;
     }
   };

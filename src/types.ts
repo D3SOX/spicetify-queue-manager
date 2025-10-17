@@ -20,6 +20,7 @@ export type Settings = {
   queueMaxSize: number;
   queueWarnThreshold: number;
   promptManualBeforeReplace: boolean;
+  language?: string;
 };
 
 export type BadgeVariant = "default" | "accent" | "version" | "channel";

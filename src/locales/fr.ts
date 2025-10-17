@@ -47,7 +47,7 @@ export const fr: TranslationKeys = {
       automaticSnapshots: "Instantanés Automatiques",
       automaticSnapshotsCaption: "Capturés en arrière-plan",
       settings: "Paramètres",
-      settingsCaption: "Ajuster l'automatisation et les alertes de file",
+      settingsCaption: "Personnalisez votre expérience",
     },
     empty: {
       noManualSnapshots: "Aucun instantané manuel pour le moment",
@@ -91,6 +91,9 @@ export const fr: TranslationKeys = {
     maxAutomaticDescription: "Les instantanés plus anciens sont supprimés. Attention lors du changement",
     queueMaxSize: "Taille max de la file",
     queueWarnThreshold: "Avertir quand emplacements restants ≤",
+    language: "Langue",
+    languageDescription: "Remplacer la langue détectée automatiquement",
+    autoDetected: "Détecté automatiquement",
   },
   toasts: {
     snapshotSaved: "Instantané enregistré",

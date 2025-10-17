@@ -47,7 +47,7 @@ export const es: TranslationKeys = {
       automaticSnapshots: "Instantáneas Automáticas",
       automaticSnapshotsCaption: "Capturadas en segundo plano",
       settings: "Configuración",
-      settingsCaption: "Ajustar automatización y alertas de cola",
+      settingsCaption: "Personaliza tu experiencia",
     },
     empty: {
       noManualSnapshots: "Aún no hay instantáneas manuales",
@@ -91,6 +91,9 @@ export const es: TranslationKeys = {
     maxAutomaticDescription: "Las instantáneas más antiguas se eliminan. Ten cuidado al cambiar esto",
     queueMaxSize: "Tamaño máximo de cola",
     queueWarnThreshold: "Advertir cuando espacios restantes ≤",
+    language: "Idioma",
+    languageDescription: "Anular el idioma detectado automáticamente",
+    autoDetected: "Detectado automáticamente",
   },
   toasts: {
     snapshotSaved: "Instantánea guardada",

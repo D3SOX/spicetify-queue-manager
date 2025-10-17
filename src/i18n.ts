@@ -89,6 +89,9 @@ export type TranslationKeys = {
     maxAutomaticDescription: string;
     queueMaxSize: string;
     queueWarnThreshold: string;
+    language: string;
+    languageDescription: string;
+    autoDetected: string;
   };
   toasts: {
     snapshotSaved: string;
@@ -167,22 +170,27 @@ export type TranslationKeys = {
 
 export type TranslationParams = Record<string, string | number>;
 
-// Single source of truth for supported languages
 export const SUPPORTED_LOCALES = ['en', 'de', 'es', 'fr'] as const;
 
 export type Locale = typeof SUPPORTED_LOCALES[number];
 
 function getCurrentLocale(): Locale {
   try {
+    // Check if there's a language override in settings
+    const settings = loadSettings();
+    if (settings.language && SUPPORTED_LOCALES.includes(settings.language as Locale)) {
+      return settings.language as Locale;
+    }
+    
+    // Auto-detect from Spotify's locale
     const locale = Spicetify?.Platform?.Session?.locale;
-    // Check if the detected locale is in our supported locales
     if (SUPPORTED_LOCALES.includes(locale as Locale)) {
       return locale as Locale;
     }
-    return 'en'; // Default fallback
-  } catch {
-    return 'en'; // Fallback on error
-  }
+  } catch {}
+  
+  // Fallback
+  return 'en';
 }
 
 // Helper type to convert nested object keys to dot notation
@@ -204,6 +212,7 @@ import { en } from './locales/en';
 import { de } from './locales/de';
 import { es } from './locales/es';
 import { fr } from './locales/fr';
+import { loadSettings } from './storage';
 
 const locales: Record<Locale, TranslationKeys> = {
   en,
@@ -248,5 +257,9 @@ export function getLocale(): Locale {
   return currentLocale;
 }
 
+export function refreshLocale(): void {
+  currentLocale = getCurrentLocale();
+}
+
 // Initialize locale
-currentLocale = getCurrentLocale();
+refreshLocale();

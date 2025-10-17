@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: Settings = {
   queueMaxSize: 80,
   queueWarnThreshold: 5,
   promptManualBeforeReplace: false,
+  language: undefined,
 };
 
 export function loadSettings(): Settings {
@@ -29,6 +30,7 @@ export function loadSettings(): Settings {
       queueMaxSize: typeof parsed.queueMaxSize === "number" && parsed.queueMaxSize > 1 ? parsed.queueMaxSize : DEFAULT_SETTINGS.queueMaxSize,
       queueWarnThreshold: typeof parsed.queueWarnThreshold === "number" && parsed.queueWarnThreshold >= 0 ? parsed.queueWarnThreshold : DEFAULT_SETTINGS.queueWarnThreshold,
       promptManualBeforeReplace: parsed.promptManualBeforeReplace !== false,
+      language: typeof parsed.language === "string" ? parsed.language : undefined,
     };
     return s;
   } catch {

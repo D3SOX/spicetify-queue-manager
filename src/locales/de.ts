@@ -47,7 +47,7 @@ export const de: TranslationKeys = {
       automaticSnapshots: "Automatische Snapshots",
       automaticSnapshotsCaption: "Im Hintergrund erfasst",
       settings: "Einstellungen",
-      settingsCaption: "Automatisierung und Warteschlangenwarnungen anpassen",
+      settingsCaption: "Deine Erfahrung anpassen",
     },
     empty: {
       noManualSnapshots: "Noch keine manuellen Snapshots",
@@ -91,6 +91,9 @@ export const de: TranslationKeys = {
     maxAutomaticDescription: "Ältere Snapshots werden entfernt. Vorsicht beim Ändern",
     queueMaxSize: "Max. Warteschlangen-Größe",
     queueWarnThreshold: "Warnen wenn verbleibende Plätze ≤",
+    language: "Sprache",
+    languageDescription: "Die automatisch erkannte Sprache überschreiben",
+    autoDetected: "Automatisch erkannt",
   },
   toasts: {
     snapshotSaved: "Snapshot gespeichert",

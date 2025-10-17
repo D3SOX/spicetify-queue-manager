@@ -47,7 +47,7 @@ export const en: TranslationKeys = {
       automaticSnapshots: "Automatic Snapshots",
       automaticSnapshotsCaption: "Captured in the background",
       settings: "Settings",
-      settingsCaption: "Tune automation and queue alerts",
+      settingsCaption: "Customize your experience",
     },
     empty: {
       noManualSnapshots: "No manual snapshots yet",
@@ -91,6 +91,9 @@ export const en: TranslationKeys = {
     maxAutomaticDescription: "Older snapshots are pruned. Be careful when changing this",
     queueMaxSize: "Queue max size",
     queueWarnThreshold: "Warn when remaining slots ≤",
+    language: "Language",
+    languageDescription: "Override the auto-detected language",
+    autoDetected: "Auto-detected",
   },
   toasts: {
     snapshotSaved: "Snapshot saved",
