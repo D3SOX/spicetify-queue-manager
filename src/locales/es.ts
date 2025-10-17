@@ -27,8 +27,8 @@ export const es: TranslationKeys = {
     labels: {
       snapshotName: "Nombre de instantánea",
       toggleItems: "Alternar elementos",
-      replaceQueue: "Reemplazar cola",
-      appendQueue: "Añadir a la cola",
+      replaceQueue: "Reemplazar la cola actual",
+      appendQueue: "Añadir elementos faltantes a la cola",
       exportToPlaylist: "Exportar a playlist",
       renameSnapshot: "Renombrar instantánea",
       resetName: "Restablecer nombre",

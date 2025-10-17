@@ -27,8 +27,8 @@ export const de: TranslationKeys = {
     labels: {
       snapshotName: "Snapshot-Name",
       toggleItems: "Elemente ein-/ausblenden",
-      replaceQueue: "Warteschlange ersetzen",
-      appendQueue: "Zur Warteschlange hinzufügen",
+      replaceQueue: "Die aktuelle Warteschlange ersetzen",
+      appendQueue: "Fehlende Elemente zur Warteschlange hinzufügen",
       exportToPlaylist: "Als Playlist exportieren",
       renameSnapshot: "Snapshot umbenennen",
       resetName: "Name zurücksetzen",

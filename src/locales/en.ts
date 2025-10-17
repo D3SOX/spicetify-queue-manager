@@ -27,8 +27,8 @@ export const en: TranslationKeys = {
     labels: {
       snapshotName: "Snapshot name",
       toggleItems: "Toggle items",
-      replaceQueue: "Replace queue",
-      appendQueue: "Append to queue",
+      replaceQueue: "Replace the current queue",
+      appendQueue: "Append missing items to queue",
       exportToPlaylist: "Export to playlist",
       renameSnapshot: "Rename snapshot",
       resetName: "Reset name",

@@ -27,8 +27,8 @@ export const fr: TranslationKeys = {
     labels: {
       snapshotName: "Nom de l'instantané",
       toggleItems: "Basculer les éléments",
-      replaceQueue: "Remplacer la file",
-      appendQueue: "Ajouter à la file",
+      replaceQueue: "Remplacer la file actuelle",
+      appendQueue: "Ajouter les éléments manquants à la file",
       exportToPlaylist: "Exporter vers playlist",
       renameSnapshot: "Renommer l'instantané",
       resetName: "Réinitialiser le nom",
