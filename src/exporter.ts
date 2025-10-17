@@ -141,7 +141,15 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
       setButtonLabel(buttonEl, "Appending…");
     }
 
-    const items = snapshot.items.slice();
+    // Filter out items that are already present in the current queue
+    const existingQueue = getQueueFromSpicetify();
+    const existingSet = new Set(existingQueue);
+    const items = snapshot.items.filter(u => !existingSet.has(u));
+
+    if (!items.length) {
+      showWarningToast("All snapshot items are already in the queue");
+      return;
+    }
     let added = 0;
 
     for (let i = 0; i < items.length; i += 100) {
