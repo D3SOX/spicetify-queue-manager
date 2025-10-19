@@ -2,6 +2,14 @@
 
 This documents the user-facing changes for each version
 
+## 0.6
+
+- Queue capacity watcher now only sends notifications when the queue size has actually increased
+- Appending songs to queue now filters out songs that are already in the queue
+- Add a button to clear all automatic snapshots
+- Small UI improvements (collapsible settings, tooltips)
+- Add support for multiple languages. Supports English, German, Spanish and French and can be changed in settings
+
 ## 0.5.1
 
 - Fix manual snapshot getting saved with custom name when not changing it from the default
