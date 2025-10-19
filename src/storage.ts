@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: Settings = {
   queueWarnThreshold: 5,
   promptManualBeforeReplace: false,
   language: undefined,
+  settingsCollapsed: false,
 };
 
 export function loadSettings(): Settings {
@@ -31,6 +32,7 @@ export function loadSettings(): Settings {
       queueWarnThreshold: typeof parsed.queueWarnThreshold === "number" && parsed.queueWarnThreshold >= 0 ? parsed.queueWarnThreshold : DEFAULT_SETTINGS.queueWarnThreshold,
       promptManualBeforeReplace: parsed.promptManualBeforeReplace !== false,
       language: typeof parsed.language === "string" ? parsed.language : undefined,
+      settingsCollapsed: parsed.settingsCollapsed ?? DEFAULT_SETTINGS.settingsCollapsed,
     };
     return s;
   } catch {

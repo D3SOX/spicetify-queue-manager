@@ -21,6 +21,7 @@ export type Settings = {
   queueWarnThreshold: number;
   promptManualBeforeReplace: boolean;
   language?: string;
+  settingsCollapsed: boolean;
 };
 
 export type BadgeVariant = "default" | "accent" | "version" | "channel";

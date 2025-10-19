@@ -1,7 +1,7 @@
 import "./ui.css";
 
 import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
-import { loadSnapshots, pruneAutosToMax, saveSnapshots, clearAutoSnapshots } from "./storage";
+import { loadSnapshots, pruneAutosToMax, saveSnapshots, clearAutoSnapshots, loadSettings, saveSettings } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon } from "./utils";
 import { showErrorToast, showSuccessToast } from "./toast";
@@ -276,8 +276,10 @@ function generateSectionsHTML(): string {
 }
 
 function generateSettingsHTML(s: Settings): string {
+  const collapsedClass = s.settingsCollapsed ? "collapsed" : "";
+  const toggleIcon = "chevron-right";
   return `
-        <div class="qs-settings">
+        <div class="qs-settings ${collapsedClass}">
           <div class="qs-settings-header">
             <div class="qs-section-heading">
               ${getIconMarkup("grid-view")}
@@ -286,60 +288,65 @@ function generateSettingsHTML(s: Settings): string {
                   <div class="qs-section-caption">${t('ui.sections.settingsCaption')}</div>
               </div>
             </div>
+            <button type="button" class="qs-settings-toggle" id="qs-settings-toggle">
+              ${getIconMarkup(toggleIcon)}
+            </button>
           </div>
-          <div class="qs-setting">
+          <div class="qs-settings-content">
+            <div class="qs-setting">
               <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> ${getIconMarkup("brightness")}${t('settings.autoEnabled')}</label>
-            <div class="qs-dim">${t('settings.autoMode')} 
-              <div class="qs-radio-group" id="qs-auto-mode-group">
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} ${t('settings.timeBased')}</span></label>
-                <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} ${t('settings.queueChanges')}</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">${t('settings.experimental')}</span>${t('settings.experimentalTooltip')}</span></span></label>
+              <div class="qs-dim">${t('settings.autoMode')} 
+                <div class="qs-radio-group" id="qs-auto-mode-group">
+                  <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} ${t('settings.timeBased')}</span></label>
+                  <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} ${t('settings.queueChanges')}</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">${t('settings.experimental')}</span>${t('settings.experimentalTooltip')}</span></span></label>
+                </div>
+              </div>
+              <div class="qs-setting" style="margin-top:6px">
+                <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> ${getIconMarkup("search")} ${t('settings.onlyNewItems')}</label>
+                <div style="opacity:0.7; font-size:12px">${t('settings.onlyNewItemsDescription')}</div>
+              </div>
+              <div class="qs-setting" style="margin-top:6px">
+                <div style="opacity:0.7; font-size:12px">${t('settings.equalQueuesNote')}</div>
+              </div>
+              <div class="qs-setting" style="margin-top:12px">
+                <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnEnabled')}</label>
+                <div style="opacity:0.7; font-size:12px">${t('settings.queueWarnDescription')}</div>
+              </div>
+              <div class="qs-setting" style="margin-top:12px">
+                <label class="qs-checkbox"><input type="checkbox" id="qs-prompt-manual-before-replace" ${s.promptManualBeforeReplace ? "checked" : ""}/> ${getIconMarkup("copy")} ${t('settings.promptManualBeforeReplace')}</label>
+                <div style="opacity:0.7; font-size:12px">${t('settings.promptManualDescription')}</div>
+              </div>
+              <div class="qs-setting" style="margin-top:12px">
+                <label>${getIconMarkup("search")} ${t('settings.language')}</label>
+                <select class="qs-input" id="qs-language">
+                  <option value="" ${!s.language ? "selected" : ""}>${t('settings.autoDetected')}</option>
+                  <option value="en" ${s.language === "en" ? "selected" : ""}>English</option>
+                  <option value="de" ${s.language === "de" ? "selected" : ""}>Deutsch</option>
+                  <option value="es" ${s.language === "es" ? "selected" : ""}>Español</option>
+                  <option value="fr" ${s.language === "fr" ? "selected" : ""}>Français</option>
+                </select>
+                <div style="opacity:0.7; font-size:12px">${t('settings.languageDescription')}</div>
               </div>
             </div>
-            <div class="qs-setting" style="margin-top:6px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> ${getIconMarkup("search")} ${t('settings.onlyNewItems')}</label>
-              <div style="opacity:0.7; font-size:12px">${t('settings.onlyNewItemsDescription')}</div>
-            </div>
-            <div class="qs-setting" style="margin-top:6px">
-              <div style="opacity:0.7; font-size:12px">${t('settings.equalQueuesNote')}</div>
-            </div>
-            <div class="qs-setting" style="margin-top:12px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-queue-warn-enabled" ${s.queueWarnEnabled ? "checked" : ""}/> ${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnEnabled')}</label>
-              <div style="opacity:0.7; font-size:12px">${t('settings.queueWarnDescription')}</div>
-            </div>
-            <div class="qs-setting" style="margin-top:12px">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-prompt-manual-before-replace" ${s.promptManualBeforeReplace ? "checked" : ""}/> ${getIconMarkup("copy")} ${t('settings.promptManualBeforeReplace')}</label>
-              <div style="opacity:0.7; font-size:12px">${t('settings.promptManualDescription')}</div>
-            </div>
-            <div class="qs-setting" style="margin-top:12px">
-              <label>${getIconMarkup("search")} ${t('settings.language')}</label>
-              <select class="qs-input" id="qs-language">
-                <option value="" ${!s.language ? "selected" : ""}>${t('settings.autoDetected')}</option>
-                <option value="en" ${s.language === "en" ? "selected" : ""}>English</option>
-                <option value="de" ${s.language === "de" ? "selected" : ""}>Deutsch</option>
-                <option value="es" ${s.language === "es" ? "selected" : ""}>Español</option>
-                <option value="fr" ${s.language === "fr" ? "selected" : ""}>Français</option>
-              </select>
-              <div style="opacity:0.7; font-size:12px">${t('settings.languageDescription')}</div>
-            </div>
-          </div>
-          <div class="qs-right">
-            <div class="qs-setting">
-              <label>${getIconMarkup("clock")} ${t('settings.interval')}</label>
-              <input class="qs-input" type="number" id="qs-auto-interval-mins" min="0.5" step="0.5" value="${(s.autoIntervalMs / 60000).toFixed(2)}" ${s.autoEnabled && s.autoMode === "timer" ? "" : "disabled"} />
-              <div style="opacity:0.7; font-size:12px">${t('settings.intervalDescription')}</div>
-            </div>
-            <div class="qs-setting">
-              <label>${getIconMarkup("chart-up")} ${t('settings.maxAutomaticSnapshots')}</label>
-              <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
-              <div style="opacity:0.7; font-size:12px">${t('settings.maxAutomaticDescription')}</div>
-            </div>
-            <div class="qs-setting">
-              <label>${getIconMarkup("queue")} ${t('settings.queueMaxSize')}</label>
-              <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize}" ${s.queueWarnEnabled ? "" : "disabled"} />
-            </div>
-            <div class="qs-setting">
-              <label>${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnThreshold')}</label>
-              <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold}" ${s.queueWarnEnabled ? "" : "disabled"} />
+            <div class="qs-right">
+              <div class="qs-setting">
+                <label>${getIconMarkup("clock")} ${t('settings.interval')}</label>
+                <input class="qs-input" type="number" id="qs-auto-interval-mins" min="0.5" step="0.5" value="${(s.autoIntervalMs / 60000).toFixed(2)}" ${s.autoEnabled && s.autoMode === "timer" ? "" : "disabled"} />
+                <div style="opacity:0.7; font-size:12px">${t('settings.intervalDescription')}</div>
+              </div>
+              <div class="qs-setting">
+                <label>${getIconMarkup("chart-up")} ${t('settings.maxAutomaticSnapshots')}</label>
+                <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
+                <div style="opacity:0.7; font-size:12px">${t('settings.maxAutomaticDescription')}</div>
+              </div>
+              <div class="qs-setting">
+                <label>${getIconMarkup("queue")} ${t('settings.queueMaxSize')}</label>
+                <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize}" ${s.queueWarnEnabled ? "" : "disabled"} />
+              </div>
+              <div class="qs-setting">
+                <label>${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnThreshold')}</label>
+                <input class="qs-input" type="number" id="qs-queue-warn-threshold" min="0" step="1" value="${s.queueWarnThreshold}" ${s.queueWarnEnabled ? "" : "disabled"} />
+              </div>
             </div>
           </div>
         </div>
@@ -424,7 +431,7 @@ export function openManagerModal(ui: UIHandlers): void {
 
     const snapshots = loadSnapshots();
 
-    const clickedButton = target.closest<HTMLButtonElement>(".qs-btn, .qs-icon-btn");
+    const clickedButton = target.closest<HTMLButtonElement>(".qs-btn, .qs-icon-btn, .qs-settings-toggle");
 
     if (clickedButton?.id === "qs-new-manual") {
       e.preventDefault();
@@ -479,6 +486,26 @@ export function openManagerModal(ui: UIHandlers): void {
       e.preventDefault();
       renderSettings(ui);
       renderList();
+      return;
+    }
+    if (clickedButton?.id === "qs-settings-toggle") {
+      e.preventDefault();
+      const currentSettings = ui.getSettings();
+      const newSettings = { ...currentSettings, settingsCollapsed: !currentSettings.settingsCollapsed };
+      ui.setSettings(newSettings);
+      
+      const settingsEl = document.querySelector(".qs-settings") as HTMLElement;
+      const settingsContent = document.querySelector(".qs-settings-content") as HTMLElement;
+      
+      if (settingsEl && settingsContent) {
+        if (newSettings.settingsCollapsed) {
+          // Collapsing
+          settingsEl.classList.add("collapsed");
+        } else {
+          // Expanding
+          settingsEl.classList.remove("collapsed");
+        }
+      }
       return;
     }
 
