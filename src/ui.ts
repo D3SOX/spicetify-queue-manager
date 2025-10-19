@@ -275,6 +275,23 @@ function generateSectionsHTML(): string {
     `;
 }
 
+function generateHeaderHTML(): string {
+  return `
+        <div class="qs-header">
+          <div class="qs-header-title">
+            <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
+            <span class="qs-header-badges">${renderBadge(`v${APP_VERSION}`, "version")}${APP_CHANNEL ? renderBadge(APP_CHANNEL.toUpperCase(), "channel") : ""}</span>
+          </div>
+          <div class="qs-header-actions">
+            ${renderButton(t('ui.buttons.refresh'), "repeat", { id: "qs-refresh", tone: "subtle" })}
+            ${renderButton(t('ui.buttons.exportSettings'), "download", { id: "qs-export-settings", title: t('ui.labels.exportSettings') })}
+            ${renderButton(t('ui.buttons.importSnapshots'), "chart-up", { id: "qs-import-snapshots", title: t('ui.labels.importSnapshots') })}
+            ${renderButton(t('ui.buttons.importSettings'), "chart-up", { id: "qs-import-settings", title: t('ui.labels.importSettings') })}
+          </div>
+        </div>
+    `;
+}
+
 function generateSettingsHTML(s: Settings): string {
   const collapsedClass = s.settingsCollapsed ? "collapsed" : "";
   const toggleIcon = "chevron-right";
@@ -353,6 +370,13 @@ function generateSettingsHTML(s: Settings): string {
     `;
 }
 
+export function renderHeader(): void {
+    const headerEl = document.querySelector(".qs-header");
+    if (headerEl) {
+        headerEl.outerHTML = generateHeaderHTML();
+    }
+}
+
 export function renderSettings(ui: UIHandlers) {
     const settingsEl = document.querySelector(".qs-settings");
     if (settingsEl) {
@@ -361,26 +385,14 @@ export function renderSettings(ui: UIHandlers) {
 }
 
 export function openManagerModal(ui: UIHandlers): void {
-  const versionBadge = renderBadge(`v${APP_VERSION}`, "version");
-  const channelBadge = APP_CHANNEL ? renderBadge(APP_CHANNEL.toUpperCase(), "channel") : "";
   const sections = generateSectionsHTML();
   const s = ui.getSettings();
   const settingsHTML = generateSettingsHTML(s);
+  const headerHTML = generateHeaderHTML();
 
   const body = `
       <div class="qs-container">
-        <div class="qs-header">
-          <div class="qs-header-title">
-            <div class="qs-header-icon">${getIconMarkup("queue", 20)}</div>
-            <span class="qs-header-badges">${versionBadge}${channelBadge}</span>
-          </div>
-          <div class="qs-header-actions">
-            ${renderButton(t('ui.buttons.refresh'), "repeat", { id: "qs-refresh", tone: "subtle" })}
-            ${renderButton(t('ui.buttons.exportSettings'), "download", { id: "qs-export-settings", title: t('ui.labels.exportSettings') })}
-            ${renderButton(t('ui.buttons.importSnapshots'), "chart-up", { id: "qs-import-snapshots", title: t('ui.labels.importSnapshots') })}
-            ${renderButton(t('ui.buttons.importSettings'), "chart-up", { id: "qs-import-settings", title: t('ui.labels.importSettings') })}
-          </div>
-        </div>
+        ${headerHTML}
         ${settingsHTML}
         <div id="qs-list">
           ${sections || `<div style="opacity:0.7">${t('ui.empty.noSnapshots')}</div>`}
@@ -484,6 +496,7 @@ export function openManagerModal(ui: UIHandlers): void {
     }
     if (clickedButton?.id === "qs-refresh") {
       e.preventDefault();
+      renderHeader();
       renderSettings(ui);
       renderList();
       return;
@@ -732,6 +745,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const newSettings: Settings = { ...s0, language };
       ui.setSettings(newSettings);
       refreshLocale();
+      renderHeader();
       renderSettings(ui);
       renderList();
       return;
