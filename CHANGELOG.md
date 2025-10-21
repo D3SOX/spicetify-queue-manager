@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.6.1
+
+- Fix interaction when settings are collapsed
+
 ## 0.6
 
 - Queue capacity watcher now only sends notifications when the queue size has actually increased
