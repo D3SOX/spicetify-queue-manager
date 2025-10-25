@@ -180,7 +180,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
         const now = Date.now();
         if (lastWarnRemaining !== remaining || now - lastWarnAt >= warnCooldownMs) {
           const used = maxSize - remaining;
-          showWarningToast(t('toasts.queueNearlyFull', { used, max: maxSize }), { duration: 250000, id: "queue-nearly-full" });
+          showWarningToast(t('toasts.queueNearlyFull', { used, max: maxSize }), { duration: 15000, id: "queue-nearly-full" });
           lastWarnRemaining = remaining;
           lastWarnAt = now;
         }
