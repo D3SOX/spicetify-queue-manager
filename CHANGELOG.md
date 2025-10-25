@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.6.2
+
+- Reduce queue nearly full warning toast duration to 15 seconds
+
 ## 0.6.1
 
 - Fix interaction when settings are collapsed
