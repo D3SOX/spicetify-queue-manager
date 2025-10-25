@@ -96,7 +96,7 @@ export function createAutoManager(getSettings: () => Settings) {
 
       const onQueueUpdate = (evt: QueueUpdateEvent) => {
         runSnapshotIfChanged(s);
-        console.log(`${APP_NAME}: queue_update`, evt);
+        //console.debug(`${APP_NAME}: queue_update`, evt);
       };
       events.addListener("queue_update", onQueueUpdate);
 

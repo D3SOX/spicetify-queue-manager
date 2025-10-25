@@ -213,6 +213,7 @@ import { de } from './locales/de';
 import { es } from './locales/es';
 import { fr } from './locales/fr';
 import { loadSettings } from './storage';
+import { APP_NAME } from './appInfo';
 
 const locales: Record<Locale, TranslationKeys> = {
   en,
@@ -231,7 +232,7 @@ export function t(
   const translation = getNestedValue(locales[currentLocale], key);
   
   if (typeof translation !== 'string') {
-    console.warn(`Translation missing for key: ${key} in locale: ${currentLocale}`);
+    console.warn(`${APP_NAME}: translation missing for key: ${key} in locale: ${currentLocale}`);
     return String(key);
   }
   

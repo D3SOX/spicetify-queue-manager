@@ -42,7 +42,7 @@ export function getQueueFromSpicetify(): string[] {
       }
     }
     const out = list.length ? dedupeConsecutive(list) : [];
-    console.log(`${APP_NAME}: Spicetify.Queue -> now=%s queuedNext=%d total=%d`, Boolean(current), queuedCount, out.length);
+    //console.debug(`${APP_NAME}: Spicetify.Queue -> now=%s queuedNext=%d total=%d`, Boolean(current), queuedCount, out.length);
     return out;
   } catch (e) { 
     console.error(`${APP_NAME}: Spicetify.Queue read failed`, e);
