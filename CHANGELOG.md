@@ -2,6 +2,12 @@
 
 This documents the user-facing changes for each version
 
+## 0.6.3
+
+- Enable prompting for manual snapshot before replacing queue by default
+- Reduce max automatic snapshots by default to 15
+- Add a description to the queue max size setting
+
 ## 0.6.2
 
 - Reduce queue nearly full warning toast duration to 15 seconds
