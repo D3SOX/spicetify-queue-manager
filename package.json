@@ -11,6 +11,7 @@
   "devDependencies": {
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@types/wicg-file-system-access": "^2023.10.7",
     "spicetify-creator": "^1.0.17"
   }
 }

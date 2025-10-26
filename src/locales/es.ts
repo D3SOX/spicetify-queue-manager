@@ -130,9 +130,10 @@ export const es: TranslationKeys = {
     replaceResult: "Reemplazado; algunos elementos no se pudieron encolar ({{added}}/{{total}})",
     exportCanceled: "Exportación cancelada ({{reason}})",
     exportedToDownloads: "{{filename}} exportado a la carpeta de Descargas",
-    failedToExportJson: "Falló la exportación JSON",
+    failedToExportJson: "Falló la exportación JSON: {{reason}}",
     importCanceled: "Importación cancelada ({{reason}})",
-    failedToImportJson: "Falló la importación JSON",
+    failedToImportJson: "Falló la importación JSON: {{reason}}",
+    failedToImportJsonAccess: "Falló la importación JSON: El archivo está vacío o no es accesible",
   },
   dialogs: {
     saveSnapshot: {

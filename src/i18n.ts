@@ -131,6 +131,7 @@ export type TranslationKeys = {
     failedToExportJson: string;
     importCanceled: string;
     failedToImportJson: string;
+    failedToImportJsonAccess: string;
   };
   dialogs: {
     saveSnapshot: {

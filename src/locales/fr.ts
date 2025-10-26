@@ -130,9 +130,10 @@ export const fr: TranslationKeys = {
     replaceResult: "Remplacé ; certains éléments n'ont pas pu être mis en file ({{added}}/{{total}})",
     exportCanceled: "Exportation annulée ({{reason}})",
     exportedToDownloads: "{{filename}} exporté vers le dossier Téléchargements",
-    failedToExportJson: "Échec de l'exportation JSON",
+    failedToExportJson: "Échec de l'exportation JSON : {{reason}}",
     importCanceled: "Importation annulée ({{reason}})",
-    failedToImportJson: "Échec de l'importation JSON",
+    failedToImportJson: "Échec de l'importation JSON : {{reason}}",
+    failedToImportJsonAccess: "Échec de l'importation JSON : Le fichier est vide ou inaccessible",
   },
   dialogs: {
     saveSnapshot: {

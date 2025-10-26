@@ -66,10 +66,9 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });
 
-    const w: any = window as any;
-    if (w && typeof w.showSaveFilePicker === "function") {
+    if (typeof window?.showSaveFilePicker === "function") {
       try {
-        const handle = await w.showSaveFilePicker({
+        const handle = await window.showSaveFilePicker({
           suggestedName: filename,
           types: [
             {
@@ -82,11 +81,28 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
         await writable.write(blob);
         await writable.close();
         return;
-      } catch (err: any) {
-        if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-          showWarningToast(t('toasts.exportCanceled', { reason: err.name }));
+      } catch (err: unknown) {
+        const isError = err instanceof Error;
+        const errorName = isError ? err.name : 'Unknown';
+        const errorMessage = isError ? err.message : '';
+        
+        // Check if this is a file system error disguised as AbortError
+        const isFileSystemError = errorName === "AbortError" && (
+          errorMessage.includes('Failed to create') ||
+          errorMessage.includes('Failed to truncate') ||
+          errorMessage.includes('permission') ||
+          errorMessage.includes('access') ||
+          errorMessage.includes('denied')
+        );
+        
+        // Only treat as user cancellation if it's truly a user abort
+        if (errorName === "AbortError" && !isFileSystemError) {
           return;
         }
+        
+        const reason = isError ? `${errorName}: ${errorMessage}` : 'Unknown error';
+        showErrorToast(t('toasts.failedToExportJson', { reason }), { duration: 10000 });
+        return;
       }
     }
 
@@ -102,18 +118,19 @@ export async function downloadJson(filename: string, data: any): Promise<void> {
     showSuccessToast(t('toasts.exportedToDownloads', { filename }));
   } catch (e) {
     console.warn(`${APP_NAME}: downloadJson failed`, e);
-    showErrorToast(t('toasts.failedToExportJson'));
+    const isError = e instanceof Error;
+    const reason = isError ? `${e.name}: ${e.message}` : 'Unknown error';
+    showErrorToast(t('toasts.failedToExportJson', { reason }), { duration: 10000 });
   }
 }
 
 export async function uploadJson<T>(): Promise<T | null> {
   try {
-    const w: any = window as any;
     let fileContent: string | undefined;
 
-    if (w && typeof w.showOpenFilePicker === "function") {
+    if (typeof window?.showOpenFilePicker === "function") {
       try {
-        const [handle] = await w.showOpenFilePicker({
+        const [handle] = await window.showOpenFilePicker({
           multiple: false,
           types: [
             {
@@ -124,11 +141,15 @@ export async function uploadJson<T>(): Promise<T | null> {
         });
         const file = await handle.getFile();
         fileContent = await file.text();
-      } catch (err: any) {
-        if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
-          showWarningToast(t('toasts.importCanceled', { reason: err.name }));
+      } catch (err: unknown) {
+        const isError = err instanceof Error;
+        const errorName = isError ? err.name : 'Unknown';
+        if (errorName === "AbortError") {
           return null;
         }
+        const reason = isError ? `${err.name}: ${err.message}` : 'Unknown error';
+        showErrorToast(t('toasts.failedToImportJson', { reason }), { duration: 10000 });
+        return null;
       }
     } else {
       // Fallback for browsers that don't support showOpenFilePicker
@@ -141,10 +162,27 @@ export async function uploadJson<T>(): Promise<T | null> {
           if (input.files?.length) {
             try {
               const file = input.files[0];
+              
+              if (file.size === 0) {
+                showErrorToast(t('toasts.failedToImportJsonAccess'), { duration: 10000 });
+                resolve(null);
+                return;
+              }
+              
               const text = await file.text();
+              
+              if (text.length === 0) {
+                showErrorToast(t('toasts.failedToImportJsonAccess'), { duration: 10000 });
+                resolve(null);
+                return;
+              }
+              
               resolve(text);
             } catch (readErr) {
               console.error(`${APP_NAME}: file read failed`, readErr);
+              const isError = readErr instanceof Error;
+              const reason = isError ? `${readErr.name}: ${readErr.message}` : 'Unknown error';
+              showErrorToast(t('toasts.failedToImportJson', { reason }), { duration: 10000 });
               resolve(null);
             }
           } else {
@@ -166,7 +204,9 @@ export async function uploadJson<T>(): Promise<T | null> {
     return data as T;
   } catch (e) {
     console.warn(`${APP_NAME}: uploadJson failed`, e);
-    showErrorToast(t('toasts.failedToImportJson'));
+    const isError = e instanceof Error;
+    const reason = isError ? `${e.name}: ${e.message}` : 'Unknown error';
+    showErrorToast(t('toasts.failedToImportJson', { reason }), { duration: 10000 });
     return null;
   }
 }

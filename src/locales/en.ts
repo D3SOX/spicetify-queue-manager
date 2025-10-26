@@ -130,9 +130,10 @@ export const en: TranslationKeys = {
     replaceResult: "Replaced; some items couldn't be queued ({{added}}/{{total}})",
     exportCanceled: "Export canceled ({{reason}})",
     exportedToDownloads: "Exported {{filename}} to Downloads folder",
-    failedToExportJson: "Failed to export JSON",
+    failedToExportJson: "Failed to export JSON: {{reason}}",
     importCanceled: "Import canceled ({{reason}})",
-    failedToImportJson: "Failed to import JSON",
+    failedToImportJson: "Failed to import JSON: {{reason}}",
+    failedToImportJsonAccess: "Failed to import JSON: File is empty or inaccessible",
   },
   dialogs: {
     saveSnapshot: {

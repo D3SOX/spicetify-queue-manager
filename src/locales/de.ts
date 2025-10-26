@@ -130,9 +130,10 @@ export const de: TranslationKeys = {
     replaceResult: "Ersetzt; einige Elemente konnten nicht in die Warteschlange eingereiht werden ({{added}}/{{total}})",
     exportCanceled: "Export abgebrochen ({{reason}})",
     exportedToDownloads: "{{filename}} in den Downloads-Ordner exportiert",
-    failedToExportJson: "JSON-Export fehlgeschlagen",
+    failedToExportJson: "JSON-Export fehlgeschlagen: {{reason}}",
     importCanceled: "Import abgebrochen ({{reason}})",
-    failedToImportJson: "JSON-Import fehlgeschlagen",
+    failedToImportJson: "JSON-Import fehlgeschlagen: {{reason}}",
+    failedToImportJsonAccess: "JSON-Import fehlgeschlagen: Datei ist leer oder nicht zugänglich",
   },
   dialogs: {
     saveSnapshot: {
