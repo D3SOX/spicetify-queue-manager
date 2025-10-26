@@ -2,6 +2,11 @@
 
 This documents the user-facing changes for each version
 
+## 0.6.4
+
+- Shorten queue warning description
+- Improve filesystem access error handling
+
 ## 0.6.3
 
 - Enable prompting for manual snapshot before replacing queue by default
