@@ -82,7 +82,7 @@ export const fr: TranslationKeys = {
     onlyNewItemsDescription: "Ne se déclenche que lorsqu'il y a une nouvelle chanson qui n'était pas dans l'instantané précédent.",
     equalQueuesNote: "Les files identiques ne sont jamais sauvegardées comme instantanés automatiques.",
     queueWarnEnabled: "Avertir quand la file est presque pleine",
-    queueWarnDescription: "Limite heuristique ; inclut la piste actuelle. Ajuster si nécessaire.",
+    queueWarnDescription: "Limite heuristique ; inclut la piste actuelle.",
     promptManualBeforeReplace: "Demander de sauvegarder un instantané manuel avant de remplacer la file",
     promptManualDescription: "Propose de sauvegarder la file actuelle avant de la remplacer.",
     interval: "Intervalle (minutes)",

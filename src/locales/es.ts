@@ -82,7 +82,7 @@ export const es: TranslationKeys = {
     onlyNewItemsDescription: "Solo se activa cuando hay una nueva canción que no estaba en la instantánea anterior.",
     equalQueuesNote: "Las colas iguales nunca se guardan como instantáneas automáticas.",
     queueWarnEnabled: "Advertir cuando la cola esté casi llena",
-    queueWarnDescription: "Límite heurístico; incluye la pista actual. Ajustar si es necesario.",
+    queueWarnDescription: "Límite heurístico; incluye la pista actual.",
     promptManualBeforeReplace: "Preguntar para guardar instantánea manual antes de reemplazar cola",
     promptManualDescription: "Ofrece guardar la cola actual antes de sobrescribirla.",
     interval: "Intervalo (minutos)",

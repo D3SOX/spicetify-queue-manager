@@ -82,7 +82,7 @@ export const de: TranslationKeys = {
     onlyNewItemsDescription: "Nur auslösen, wenn es einen neuen Song gibt, der nicht im vorherigen Snapshot war.",
     equalQueuesNote: "Gleiche Warteschlangen werden nie als automatische Snapshots gespeichert.",
     queueWarnEnabled: "Warnen, wenn Warteschlange fast voll ist",
-    queueWarnDescription: "Heuristische Grenze; beinhaltet aktuellen Track. Bei Bedarf anpassen.",
+    queueWarnDescription: "Heuristische Grenze; beinhaltet aktuellen Track.",
     promptManualBeforeReplace: "Vor dem Ersetzen der Warteschlange nach manuellem Snapshot fragen",
     promptManualDescription: "Bietet an, die aktuelle Warteschlange zu speichern, bevor sie überschrieben wird.",
     interval: "Intervall (Minuten)",

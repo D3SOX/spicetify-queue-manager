@@ -82,7 +82,7 @@ export const en: TranslationKeys = {
     onlyNewItemsDescription: "Only trigger it when there is a new song that was not in the previous snapshot.",
     equalQueuesNote: "Equal queues are never saved as automatic snapshots.",
     queueWarnEnabled: "Warn when queue is nearly full",
-    queueWarnDescription: "Heuristic limit; includes current track. Adjust if needed.",
+    queueWarnDescription: "Heuristic limit; includes current track.",
     promptManualBeforeReplace: "Ask to save manual snapshot before replacing queue",
     promptManualDescription: "Offers to store the current queue before overwriting it.",
     interval: "Interval (minutes)",
