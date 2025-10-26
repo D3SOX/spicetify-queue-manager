@@ -4,13 +4,13 @@ const SETTINGS_KEY = "queue-manager:settings";
 const DEFAULT_SETTINGS: Settings = {
   autoEnabled: false,
   autoIntervalMs: 300000,
-  maxAutosnapshots: 20,
+  maxAutosnapshots: 15,
   autoMode: "timer",
   onlyNewItems: true,
   queueWarnEnabled: true,
   queueMaxSize: 80,
   queueWarnThreshold: 5,
-  promptManualBeforeReplace: false,
+  promptManualBeforeReplace: true,
   language: undefined,
   settingsCollapsed: false,
 };
