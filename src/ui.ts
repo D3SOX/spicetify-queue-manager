@@ -359,6 +359,7 @@ function generateSettingsHTML(s: Settings): string {
               <div class="qs-setting">
                 <label>${getIconMarkup("queue")} ${t('settings.queueMaxSize')}</label>
                 <input class="qs-input" type="number" id="qs-queue-max-size" min="10" step="1" value="${s.queueMaxSize}" ${s.queueWarnEnabled ? "" : "disabled"} />
+                <div style="opacity:0.7; font-size:12px">${t('settings.queueMaxSizeDescription')}</div>
               </div>
               <div class="qs-setting">
                 <label>${getIconMarkup("exclamation-circle")} ${t('settings.queueWarnThreshold')}</label>

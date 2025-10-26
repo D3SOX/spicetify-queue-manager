@@ -88,6 +88,7 @@ export type TranslationKeys = {
     maxAutomaticSnapshots: string;
     maxAutomaticDescription: string;
     queueMaxSize: string;
+    queueMaxSizeDescription: string;
     queueWarnThreshold: string;
     language: string;
     languageDescription: string;

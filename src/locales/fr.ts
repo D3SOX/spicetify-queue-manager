@@ -90,6 +90,7 @@ export const fr: TranslationKeys = {
     maxAutomaticSnapshots: "Max instantanés automatiques",
     maxAutomaticDescription: "Les instantanés plus anciens sont supprimés. Attention lors du changement",
     queueMaxSize: "Taille max de la file",
+    queueMaxSizeDescription: "80 est la limite actuelle de Spotify. Ne changer que si Spotify la met à jour.",
     queueWarnThreshold: "Avertir quand emplacements restants ≤",
     language: "Langue",
     languageDescription: "Remplacer la langue détectée automatiquement",
