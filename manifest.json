@@ -2,7 +2,7 @@
   {
     "name": "Queue Manager",
     "description": "Save snapshots of your queue, restore them later, export to playlists and more",
-    "preview": "https://github.com/user-attachments/assets/f0802551-2acd-4bcd-8f8d-2bb33ef3e95a",
+    "preview": "https://github.com/user-attachments/assets/b9ef675b-3cd9-4bcd-a512-1555e274b501",
     "main": "dist/queue-manager.js",
     "authors": [
         { "name": "D3SOX", "url": "https://github.com/D3SOX" }
