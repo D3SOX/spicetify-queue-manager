@@ -1,6 +1,9 @@
 <div align="center">
 
-<h1>Queue Manager</h1>
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/b9ef675b-3cd9-4bcd-a512-1555e274b501" />
+
+<h1>Spicetify Queue Manager</h1>
+
 
 This extension probably serves a kinda niche purpose but if you are like me and always queue a bunch of songs, swap them around, want to play a different genre or mood but still retain the same queue for later, this is for you.
 
@@ -16,9 +19,6 @@ This can be done by:
 
 The extension adds an icon to the topbar right side of the player. Clicking it opens a modal with all the snapshots and allows you to manage settings for customizing the behavior of the extension. (see below)
 There is also a hotkey of `Ctrl+Alt+Q` to open it.
-
-# Screenshots
-
 
 | | |
 |---|---|
