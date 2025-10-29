@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS: Settings = {
   promptManualBeforeReplace: true,
   language: undefined,
   settingsCollapsed: false,
+  syncedSnapshotId: undefined,
 };
 
 export function loadSettings(): Settings {
@@ -33,6 +34,7 @@ export function loadSettings(): Settings {
       promptManualBeforeReplace: parsed.promptManualBeforeReplace !== false,
       language: typeof parsed.language === "string" ? parsed.language : undefined,
       settingsCollapsed: parsed.settingsCollapsed ?? DEFAULT_SETTINGS.settingsCollapsed,
+      syncedSnapshotId: typeof parsed.syncedSnapshotId === "string" ? parsed.syncedSnapshotId : undefined,
     };
     return s;
   } catch {
@@ -76,7 +78,8 @@ export function pruneAutosToMax(settings: Settings): void {
   const all = getSortedSnapshots();
   const manuals = all.filter(snap => snap.type === "manual");
   const autos = all.filter(snap => snap.type === "auto").slice(0, settings.maxAutosnapshots);
-  saveSnapshots([...manuals, ...autos]);
+  const synced = all.filter(snap => snap.type === "synced");
+  saveSnapshots([...manuals, ...autos, ...synced]);
 }
 
 export function addSnapshot(newSnapshot: Snapshot, settings?: Settings): void {
@@ -84,17 +87,29 @@ export function addSnapshot(newSnapshot: Snapshot, settings?: Settings): void {
   const existing = loadSnapshots();
   const manuals = existing.filter(snap => snap.type === "manual");
   const autos = existing.filter(snap => snap.type === "auto");
+  const synced = existing.filter(snap => snap.type === "synced");
 
   if (newSnapshot.type === "auto") {
     const autosWithNew = [newSnapshot, ...autos].slice(0, s.maxAutosnapshots);
-    saveSnapshots([...manuals, ...autosWithNew]);
+    saveSnapshots([...manuals, ...autosWithNew, ...synced]);
   } else {
-    saveSnapshots([newSnapshot, ...manuals, ...autos]);
+    saveSnapshots([newSnapshot, ...manuals, ...autos, ...synced]);
   }
 }
 
 export function clearAutoSnapshots(): void {
   const existing = loadSnapshots();
   const manuals = existing.filter(snap => snap.type === "manual");
-  saveSnapshots(manuals);
+  const synced = existing.filter(snap => snap.type === "synced");
+  saveSnapshots([...manuals, ...synced]);
+}
+
+export function getSyncedSnapshots(): Snapshot[] {
+  return getSortedSnapshots().filter(snap => snap.type === "synced");
+}
+
+export function getActiveSyncedSnapshot(settings: Settings): Snapshot | null {
+  if (!settings.syncedSnapshotId) return null;
+  const snapshots = loadSnapshots();
+  return snapshots.find(snap => snap.id === settings.syncedSnapshotId) ?? null;
 }

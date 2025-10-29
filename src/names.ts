@@ -96,6 +96,9 @@ export async function getSnapshotItemNames(snapshot: Snapshot): Promise<string[]
 }
 
 export function getSnapshotGeneratedNameFor(snapshot: Pick<Snapshot, "type" | "createdAt">): string {
+  if (snapshot.type === "synced") {
+    return t('snapshots.defaults.myJam');
+  }
   const prefix = snapshot.type === "auto" ? t('snapshots.types.auto') : t('snapshots.types.manual');
   return `${prefix} ${formatDateTime(snapshot.createdAt)}`;
 }

@@ -1,21 +1,23 @@
 import "./ui.css";
 
 import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
-import { loadSnapshots, pruneAutosToMax, saveSnapshots, clearAutoSnapshots, loadSettings, saveSettings } from "./storage";
+import { loadSnapshots, pruneAutosToMax, saveSnapshots, clearAutoSnapshots, loadSettings, saveSettings, getSyncedSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
-import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon } from "./utils";
-import { showErrorToast, showSuccessToast } from "./toast";
-import { createManualSnapshot, exportSnapshotToPlaylist } from "./exporter";
-import { appendSnapshotToQueue, replaceQueueWithSnapshot } from "./exporter";
+import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon, generateId, areQueuesEqual } from "./utils";
+import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
+import { createManualSnapshot, exportSnapshotToPlaylist, replaceQueueWithSnapshot, appendSnapshotToQueue } from "./exporter";
 import { APP_CHANNEL, APP_NAME, APP_NAME_SLUG, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
-import { showConfirmDialog } from "./dialogs";
+import { showConfirmDialog, showPromptDialog } from "./dialogs";
+import { createQueueSyncManager } from "./auto";
 import { importSettings, importSnapshots } from "./importer";
 import { t, refreshLocale } from "./i18n";
+import { getQueueFromSpicetify } from "./queue";
 
 export type UIHandlers = {
   getSettings: () => Settings;
   setSettings: (s: Settings) => void;
+  getSyncManager: () => ReturnType<typeof createQueueSyncManager>;
 };
 
 let boundClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -34,6 +36,32 @@ type InlineEditState = {
 };
 
 const inlineEditors = new Map<string, InlineEditState>();
+
+function applyControlDisabledStates(ui: UIHandlers) {
+  const st = ui.getSettings();
+  const syncModeActive = !!st.syncedSnapshotId;
+  const autoEnabled = st.autoEnabled && !syncModeActive;
+  
+  const autoEnabledCheckbox = document.querySelector<HTMLInputElement>("#qs-auto-enabled");
+  const radios = document.querySelectorAll<HTMLInputElement>('input.qs-radio[name="qs-auto-mode"]');
+  const intervalInput = document.querySelector<HTMLInputElement>("#qs-auto-interval-mins");
+  const chkOnlyNew = document.querySelector<HTMLInputElement>("#qs-only-new");
+  const maxAutosInput = document.querySelector<HTMLInputElement>("#qs-max-autos");
+  const queueMaxSizeInput = document.querySelector<HTMLInputElement>("#qs-queue-max-size");
+  const queueWarnThresholdInput = document.querySelector<HTMLInputElement>("#qs-queue-warn-threshold");
+  
+  // Auto-related controls are disabled during sync mode
+  if (autoEnabledCheckbox) autoEnabledCheckbox.disabled = syncModeActive;
+  radios.forEach(r => { r.disabled = !autoEnabled; });
+  if (intervalInput) intervalInput.disabled = !(autoEnabled && st.autoMode === "timer");
+  if (chkOnlyNew) chkOnlyNew.disabled = !autoEnabled;
+  if (maxAutosInput) maxAutosInput.disabled = !autoEnabled;
+  
+  // Queue warning controls are independent of sync mode
+  const warnEnabled = st.queueWarnEnabled;
+  if (queueMaxSizeInput) queueMaxSizeInput.disabled = !warnEnabled;
+  if (queueWarnThresholdInput) queueWarnThresholdInput.disabled = !warnEnabled;
+}
 
 function closeAllInlineEditors(exceptId?: string) {
   Array.from(inlineEditors.keys()).forEach(id => {
@@ -55,7 +83,7 @@ function cleanupInlineRename(id: string) {
   inlineEditors.delete(id);
 }
 
-function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
+function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot, ui: UIHandlers) {
   if (!rowEl.isConnected) return;
   const id = snapshot.id;
   if (inlineEditors.has(id)) {
@@ -93,7 +121,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
       const newValue = state.input.value.trim();
       if (!newValue) {
         showErrorToast(t('toasts.nameCannotBeEmpty'), { duration: 2000 });
-        beginInlineRename(rowEl, snapshot);
+        beginInlineRename(rowEl, snapshot, ui);
         return;
       }
       const originalTrimmed = state.originalLabel.trim();
@@ -109,7 +137,7 @@ function beginInlineRename(rowEl: HTMLElement, snapshot: Snapshot) {
       if (idx >= 0) {
         snapshots[idx].name = newValue;
         saveSnapshots(snapshots);
-        renderList();
+        renderList(ui);
       }
     }
   };
@@ -180,29 +208,51 @@ function renderBadge(text: string, variant: BadgeVariant = "default"): string {
       accent: "qs-pill--accent",
       version: "qs-pill--version",
       channel: "qs-pill--channel",
+      "active-sync": "qs-pill--active-sync",
     };
     classes.push(variantClasses[variant]);
   }
   return `<span class="${classes.join(" ")}">${escapeHtml(text)}</span>`;
 }
 
-function generateRowsHTMLFor(list: Snapshot[]): string {
+function generateRowsHTMLFor(list: Snapshot[], options: { isSynced?: boolean; activeSyncId?: string; syncModeActive?: boolean } = {}): string {
+  const { isSynced = false, activeSyncId = false } = options;
+  
   return list
     .map(s => {
       const label = escapeHtml(getSnapshotDisplayName(s));
       const hasLocal = s.items.some(u => u.startsWith("spotify:local:"));
-      const metaParts = [
-        renderBadge(`${s.items.length} ${s.items.length === 1 ? t('ui.itemSingular') : t('ui.itemPlural')}`, "accent"),
-      ];
+      const isActiveSynced = isSynced && s.id === activeSyncId;
+      const metaParts: string[] = [];
+      if (isActiveSynced) {
+        metaParts.push(renderBadge(t('ui.labels.activeSync'), "active-sync"));
+      }
+      metaParts.push(renderBadge(`${s.items.length} ${s.items.length === 1 ? t('ui.itemSingular') : t('ui.itemPlural')}`, "accent"));
       if (hasLocal) {
         metaParts.push(renderBadge(t('ui.includesLocal')));
       }
       const meta = metaParts.join("");
+      
+      const iconType = s.type === "auto" ? "clock" : s.type === "synced" ? "repeat" : "playlist";
+      
+      // For synced snapshots, show activate button if not active, or exit button if active
+      // Also show export and convert to manual buttons
+      const syncedActions = isSynced
+        ? isActiveSynced
+          ? `${renderButton(t('ui.buttons.exitSyncMode'), "x", { action: "deactivate-sync", tone: "danger" })}
+             ${renderButton(t('ui.buttons.export'), "download", { action: "export", title: t('ui.labels.exportToPlaylist') })}
+             ${renderButton(t('ui.buttons.convertToManual'), "copy", { action: "convert-to-manual", title: t('ui.labels.convertToManual') })}`
+          : `${renderButton(t('ui.buttons.activateSync'), "play", { action: "activate-sync", tone: "primary" })}
+             ${renderButton(t('ui.buttons.export'), "download", { action: "export", title: t('ui.labels.exportToPlaylist') })}
+             ${renderButton(t('ui.buttons.convertToManual'), "copy", { action: "convert-to-manual", title: t('ui.labels.convertToManual') })}`
+        : "";
+      
+      
       return `
           <div class="qs-row" data-id="${s.id}">
             <div class="qs-row-main">
               <div class="qs-row-title">
-                ${getIconMarkup(s.type === "auto" ? "clock" : "playlist")}
+                ${getIconMarkup(iconType)}
                 <span>${label}</span>
                 <span class="qs-title-actions">
                   ${renderActionIconButton("rename", "edit", t('ui.labels.renameSnapshot'))}
@@ -212,10 +262,12 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
               </div>
               <div class="qs-row-meta">${meta}</div>
               <div class="qs-row-actions">
-                ${renderButton(t('ui.buttons.view'), "chevron-right", { action: "toggle-items", title: t('ui.labels.toggleItems') })}
-                ${renderButton(t('ui.buttons.replaceQueue'), "skip-forward", { action: "replace-queue", title: t('ui.labels.replaceQueue'), tone: "primary" })}
-                ${renderButton(t('ui.buttons.appendToQueue'), "plus-alt", { action: "append-queue", title: t('ui.labels.appendQueue') })}
-                ${renderButton(t('ui.buttons.export'), "download", { action: "export", title: t('ui.labels.exportToPlaylist') })}
+                ${isSynced ? syncedActions : `
+                  ${renderButton(t('ui.buttons.view'), "chevron-right", { action: "toggle-items", title: t('ui.labels.toggleItems') })}
+                  ${renderButton(t('ui.buttons.replaceQueue'), "skip-forward", { action: "replace-queue", title: t('ui.labels.replaceQueue'), tone: "primary" })}
+                  ${renderButton(t('ui.buttons.appendToQueue'), "plus-alt", { action: "append-queue", title: t('ui.labels.appendQueue') })}
+                  ${renderButton(t('ui.buttons.export'), "download", { action: "export", title: t('ui.labels.exportToPlaylist') })}
+                `}
               </div>
             </div>
           </div>
@@ -227,13 +279,42 @@ function generateRowsHTMLFor(list: Snapshot[]): string {
     .join("");
 }
 
-function generateSectionsHTML(): string {
+function generateSectionsHTML(settings: Settings): string {
   const snapshots = getSortedSnapshots();
+  const synced = snapshots.filter(s => s.type === "synced");
   const autos = snapshots.filter(s => s.type === "auto");
   const manuals = snapshots.filter(s => s.type === "manual");
-  const autoRows = generateRowsHTMLFor(autos);
-  const manualRows = generateRowsHTMLFor(manuals);
+  
+  const syncModeActive = !!settings.syncedSnapshotId;
+  const activeSyncId = settings.syncedSnapshotId;
+  
+  const syncedRows = generateRowsHTMLFor(synced, { isSynced: true, activeSyncId, syncModeActive });
+  const autoRows = generateRowsHTMLFor(autos, { syncModeActive });
+  const manualRows = generateRowsHTMLFor(manuals, { syncModeActive });
+  
+  const syncedSection = `
+      <div class="qs-section-card${syncModeActive ? " qs-sync-active" : ""}">
+        <div class="qs-section-head">
+          <div class="qs-section-heading">
+            ${getIconMarkup("repeat")}
+            ${renderBadge(String(synced.length), "accent")}
+            <div class="qs-section-text">
+              <div class="qs-section-name">${t('ui.sections.syncedSnapshots')}</div>
+              <div class="qs-section-caption">${t('ui.sections.syncedSnapshotsCaption')}</div>
+            </div>
+          </div>
+          <div class="qs-actions">
+            ${renderButton(t('ui.buttons.createSyncedSnapshot'), "plus-alt", { id: "qs-new-synced", tone: "primary" })}
+          </div>
+        </div>
+        <div class="qs-section-body">
+          ${syncedRows || `<div class="qs-empty">${t('ui.empty.noSyncedSnapshots')}</div>`}
+        </div>
+      </div>
+    `;
+  
   return `
+      ${syncedSection}
       <div class="qs-section-card">
         <div class="qs-section-head">
           <div class="qs-section-heading">
@@ -295,6 +376,9 @@ function generateHeaderHTML(): string {
 function generateSettingsHTML(s: Settings): string {
   const collapsedClass = s.settingsCollapsed ? "collapsed" : "";
   const toggleIcon = "chevron-right";
+  const syncModeActive = !!s.syncedSnapshotId;
+  const autoDisabled = syncModeActive;
+  
   return `
         <div class="qs-settings ${collapsedClass}">
           <div class="qs-settings-header">
@@ -311,15 +395,15 @@ function generateSettingsHTML(s: Settings): string {
           </div>
           <div class="qs-settings-content">
             <div class="qs-setting">
-              <label class="qs-checkbox"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""}/> ${getIconMarkup("brightness")}${t('settings.autoEnabled')}</label>
-              <div class="qs-dim">${t('settings.autoMode')} 
+              <label class="qs-checkbox${autoDisabled ? " qs-disabled" : ""}"><input type="checkbox" id="qs-auto-enabled" ${s.autoEnabled ? "checked" : ""} ${autoDisabled ? "disabled" : ""}/> ${getIconMarkup("brightness")}${t('settings.autoEnabled')}</label>
+              <div class="qs-dim${autoDisabled ? " qs-disabled" : ""}">${t('settings.autoMode')} 
                 <div class="qs-radio-group" id="qs-auto-mode-group">
-                  <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} ${t('settings.timeBased')}</span></label>
-                  <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} ${t('settings.queueChanges')}</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">${t('settings.experimental')}</span>${t('settings.experimentalTooltip')}</span></span></label>
+                  <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="timer" ${s.autoMode === "timer" ? "checked" : ""} ${s.autoEnabled && !autoDisabled ? "" : "disabled"}/><span>${getIconMarkup("clock")} ${t('settings.timeBased')}</span></label>
+                  <label class="qs-radio-label"><input type="radio" class="qs-radio" name="qs-auto-mode" value="on-change" ${s.autoMode === "on-change" ? "checked" : ""} ${s.autoEnabled && !autoDisabled ? "" : "disabled"}/><span>${getIconMarkup("shuffle")} ${t('settings.queueChanges')}</span><span class="qs-icon"><span class="qs-icon-glyph">ⓘ</span><span class="qs-tooltip"><span class="qs-tooltip-emph">${t('settings.experimental')}</span>${t('settings.experimentalTooltip')}</span></span></label>
                 </div>
               </div>
               <div class="qs-setting" style="margin-top:6px">
-                <label class="qs-checkbox"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled ? "" : "disabled"}/> ${getIconMarkup("search")} ${t('settings.onlyNewItems')}</label>
+                <label class="qs-checkbox${autoDisabled ? " qs-disabled" : ""}"><input type="checkbox" id="qs-only-new" ${s.onlyNewItems ? "checked" : ""} ${s.autoEnabled && !autoDisabled ? "" : "disabled"}/> ${getIconMarkup("search")} ${t('settings.onlyNewItems')}</label>
                 <div style="opacity:0.7; font-size:12px">${t('settings.onlyNewItemsDescription')}</div>
               </div>
               <div class="qs-setting" style="margin-top:6px">
@@ -346,14 +430,14 @@ function generateSettingsHTML(s: Settings): string {
               </div>
             </div>
             <div class="qs-right">
-              <div class="qs-setting">
+              <div class="qs-setting${autoDisabled ? " qs-disabled" : ""}">
                 <label>${getIconMarkup("clock")} ${t('settings.interval')}</label>
-                <input class="qs-input" type="number" id="qs-auto-interval-mins" min="0.5" step="0.5" value="${(s.autoIntervalMs / 60000).toFixed(2)}" ${s.autoEnabled && s.autoMode === "timer" ? "" : "disabled"} />
+                <input class="qs-input" type="number" id="qs-auto-interval-mins" min="0.5" step="0.5" value="${(s.autoIntervalMs / 60000).toFixed(2)}" ${s.autoEnabled && s.autoMode === "timer" && !autoDisabled ? "" : "disabled"} />
                 <div style="opacity:0.7; font-size:12px">${t('settings.intervalDescription')}</div>
               </div>
-              <div class="qs-setting">
+              <div class="qs-setting${autoDisabled ? " qs-disabled" : ""}">
                 <label>${getIconMarkup("chart-up")} ${t('settings.maxAutomaticSnapshots')}</label>
-                <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled ? "" : "disabled"} />
+                <input class="qs-input" type="number" id="qs-max-autos" min="1" step="1" value="${s.maxAutosnapshots}" ${s.autoEnabled && !autoDisabled ? "" : "disabled"} />
                 <div style="opacity:0.7; font-size:12px">${t('settings.maxAutomaticDescription')}</div>
               </div>
               <div class="qs-setting">
@@ -382,12 +466,16 @@ export function renderSettings(ui: UIHandlers) {
     const settingsEl = document.querySelector(".qs-settings");
     if (settingsEl) {
         settingsEl.outerHTML = generateSettingsHTML(ui.getSettings());
+        // Apply disabled states after re-rendering
+        setTimeout(() => {
+            applyControlDisabledStates(ui);
+        }, 0);
     }
 }
 
 export function openManagerModal(ui: UIHandlers): void {
-  const sections = generateSectionsHTML();
   const s = ui.getSettings();
+  const sections = generateSectionsHTML(s);
   const settingsHTML = generateSettingsHTML(s);
   const headerHTML = generateHeaderHTML();
 
@@ -416,23 +504,6 @@ export function openManagerModal(ui: UIHandlers): void {
     boundChangeHandler = null;
   }
 
-  function applyControlDisabledStates() {
-    const st = ui.getSettings();
-    const radios = document.querySelectorAll<HTMLInputElement>('input.qs-radio[name="qs-auto-mode"]');
-    const intervalInput = document.querySelector<HTMLInputElement>("#qs-auto-interval-mins");
-    const chkOnlyNew = document.querySelector<HTMLInputElement>("#qs-only-new");
-    const maxAutosInput = document.querySelector<HTMLInputElement>("#qs-max-autos");
-    const queueMaxSizeInput = document.querySelector<HTMLInputElement>("#qs-queue-max-size");
-    const queueWarnThresholdInput = document.querySelector<HTMLInputElement>("#qs-queue-warn-threshold");
-    radios.forEach(r => { r.disabled = !st.autoEnabled; });
-    if (intervalInput) intervalInput.disabled = !(st.autoEnabled && st.autoMode === "timer");
-    if (chkOnlyNew) chkOnlyNew.disabled = !st.autoEnabled;
-    if (maxAutosInput) maxAutosInput.disabled = !st.autoEnabled;
-    const warnEnabled = st.queueWarnEnabled;
-    if (queueMaxSizeInput) queueMaxSizeInput.disabled = !warnEnabled;
-    if (queueWarnThresholdInput) queueWarnThresholdInput.disabled = !warnEnabled;
-  }
-
   boundClickHandler = async function clickHandler(e: MouseEvent) {
     const modalRoot = document.querySelector(".qs-container");
     const target = e.target as HTMLElement | null;
@@ -450,7 +521,79 @@ export function openManagerModal(ui: UIHandlers): void {
       e.preventDefault();
       closeAllInlineEditors();
       await createManualSnapshot();
-      renderList();
+      renderList(ui);
+      return;
+    }
+    if (clickedButton?.id === "qs-new-synced") {
+      e.preventDefault();
+      closeAllInlineEditors();
+      try {
+        const s = ui.getSettings();
+        const hasActiveSynced = !!s.syncedSnapshotId;
+        
+        // If there's already an active synced snapshot, warn user and confirm
+        if (hasActiveSynced) {
+          const confirmSwitch = await showConfirmDialog({
+            title: t('dialogs.switchSyncedSnapshot.title'),
+            message: t('dialogs.switchSyncedSnapshot.message'),
+            confirmLabel: t('dialogs.switchSyncedSnapshot.confirmLabel'),
+            cancelLabel: t('dialogs.switchSyncedSnapshot.cancelLabel'),
+            tone: "primary",
+          });
+          if (confirmSwitch !== "confirm") {
+            return;
+          }
+        }
+        
+        // If there's already an active synced snapshot, start with empty queue
+        const items = hasActiveSynced ? [] : await getQueueFromSpicetify();
+        
+        const defaultName = getSnapshotGeneratedNameFor({ type: "synced", createdAt: Date.now() });
+        const name = (await showPromptDialog({
+          title: t('dialogs.saveSyncedSnapshot.title'),
+          message: t('dialogs.saveSyncedSnapshot.message'),
+          confirmLabel: t('dialogs.saveSyncedSnapshot.confirmLabel'),
+          cancelLabel: t('dialogs.saveSyncedSnapshot.cancelLabel'),
+          defaultValue: defaultName,
+        }))?.trim() ?? null;
+
+        if (name === null) {
+          return;
+        } else if (name === '') {
+          showErrorToast(t('toasts.nameCannotBeEmpty'));
+          return;
+        }
+        
+        const snapshot: Snapshot = {
+          id: generateId(),
+          createdAt: Date.now(),
+          name: name === defaultName ? undefined : name,
+          type: "synced",
+          items,
+          playbackPosition: Spicetify.Player.getProgress(),
+        };
+        const allSnapshots = loadSnapshots();
+        saveSnapshots([snapshot, ...allSnapshots]);
+
+        // Automatically activate the new synced snapshot FIRST
+        const newSettings = { ...s, syncedSnapshotId: snapshot.id };
+        ui.setSettings(newSettings);
+
+        // Only replace queue when switching from another synced snapshot
+        // When creating from current queue, no need to replace (avoids interruption)
+        if (hasActiveSynced) {
+          await Spicetify.Platform.PlayerAPI.clearQueue();
+          // Then replace the queue with the snapshot content
+          await replaceQueueWithSnapshot(snapshot, clickedButton, ui);
+        }
+        
+        renderList(ui);
+        renderSettings(ui);
+        showSuccessToast(t('toasts.syncActivated'));
+      } catch (e) {
+        console.error(`${APP_NAME}: synced snapshot creation failed`, e);
+        showErrorToast(t('toasts.failedToCreateSyncedSnapshot'));
+      }
       return;
     }
     if (clickedButton?.id === "qs-export-settings") {
@@ -491,7 +634,7 @@ export function openManagerModal(ui: UIHandlers): void {
       });
       if (confirmClear !== "confirm") return;
       clearAutoSnapshots();
-      renderList();
+      renderList(ui);
       showSuccessToast(t('toasts.clearedAutomaticSnapshots', { count: autoCount }));
       return;
     }
@@ -499,7 +642,7 @@ export function openManagerModal(ui: UIHandlers): void {
       e.preventDefault();
       renderHeader();
       renderSettings(ui);
-      renderList();
+      renderList(ui);
       return;
     }
     if (clickedButton?.id === "qs-settings-toggle") {
@@ -541,7 +684,7 @@ export function openManagerModal(ui: UIHandlers): void {
     if (isRowAction) {
       if (actionAttr === "rename") {
         e.preventDefault();
-        beginInlineRename(rowEl, snap);
+        beginInlineRename(rowEl, snap, ui);
         return;
       }
       if (actionAttr === "reset-name") {
@@ -550,7 +693,7 @@ export function openManagerModal(ui: UIHandlers): void {
         if (idx >= 0) {
           delete snapshots[idx].name;
           saveSnapshots(snapshots);
-          renderList();
+          renderList(ui);
         }
         return;
       }
@@ -565,7 +708,16 @@ export function openManagerModal(ui: UIHandlers): void {
         const snapshotName = getSnapshotDisplayName(snap);
         const remaining = snapshots.filter(s => s.id !== id);
         saveSnapshots(remaining);
-        renderList();
+        
+        // If deleting the active synced snapshot, deactivate sync mode
+        const s = ui.getSettings();
+        if (s.syncedSnapshotId === id) {
+          const newSettings = { ...s, syncedSnapshotId: undefined };
+          ui.setSettings(newSettings);
+          renderSettings(ui);
+        }
+        
+        renderList(ui);
         showSuccessToast(t('toasts.snapshotDeleted', { name: snapshotName }));
         return;
       }
@@ -574,6 +726,92 @@ export function openManagerModal(ui: UIHandlers): void {
 
     const action = actionAttr;
     if (!action) return;
+
+    if (action === "activate-sync") {
+      if (exportingIds.has(id)) return;
+      exportingIds.add(id);
+      try {
+        const s = ui.getSettings();
+        // Prompt to save current queue before activation if there's no active synced snapshot
+        // Only if the current queue differs from the target snapshot
+        if (s.promptManualBeforeReplace && !s.syncedSnapshotId) {
+          const currentQueue = getQueueFromSpicetify();
+          if (!areQueuesEqual(currentQueue, snap.items)) {
+            const shouldSave = await showConfirmDialog({
+              title: t('dialogs.saveCurrentQueue.title'),
+              message: t('dialogs.saveCurrentQueue.message'),
+              confirmLabel: t('dialogs.saveCurrentQueue.confirmLabel'),
+              cancelLabel: t('dialogs.saveCurrentQueue.cancelLabel'),
+              extraLabel: t('dialogs.saveCurrentQueue.extraLabel'),
+              extraTone: "danger",
+              tone: "primary",
+            });
+            if (shouldSave === "extra") {
+              exportingIds.delete(id);
+              return;
+            }
+            if (shouldSave === "confirm") {
+              await createManualSnapshot();
+              renderList(ui);
+            }
+          }
+        }
+        const newSettings = { ...s, syncedSnapshotId: snap.id };
+        ui.setSettings(newSettings);
+        
+        await replaceQueueWithSnapshot(snap, clickedButton, ui);
+        
+        renderList(ui);
+        renderSettings(ui);
+        showSuccessToast(t('toasts.syncActivated'));
+      } catch (e) {
+        console.error(`${APP_NAME}: activate sync failed`, e);
+        showErrorToast(t('toasts.failedToActivateSync'));
+      } finally {
+        exportingIds.delete(id);
+      }
+      return;
+    }
+    if (action === "deactivate-sync") {
+      e.preventDefault();
+      const s = ui.getSettings();
+      const newSettings = { ...s, syncedSnapshotId: undefined };
+      ui.setSettings(newSettings);
+      renderList(ui);
+      renderSettings(ui);
+      showSuccessToast(t('toasts.syncDeactivated'));
+      return;
+    }
+    if (action === "convert-to-manual") {
+      e.preventDefault();
+      const confirmConvert = await showConfirmDialog({
+        title: t('dialogs.convertToManual.title'),
+        message: t('dialogs.convertToManual.message'),
+        confirmLabel: t('dialogs.convertToManual.confirmLabel'),
+        tone: "primary",
+      });
+      if (confirmConvert !== "confirm") return;
+      
+      const snapshots = loadSnapshots();
+      const idx = snapshots.findIndex(s => s.id === id);
+      if (idx >= 0) {
+        // Convert synced snapshot to manual
+        snapshots[idx].type = "manual";
+        saveSnapshots(snapshots);
+        
+        // If this was the active synced snapshot, deactivate it
+        const s = ui.getSettings();
+        if (s.syncedSnapshotId === id) {
+          const newSettings = { ...s, syncedSnapshotId: undefined };
+          ui.setSettings(newSettings);
+          renderSettings(ui);
+        }
+        
+        renderList(ui);
+        showSuccessToast(t('toasts.convertedToManual'));
+      }
+      return;
+    }
 
     if (action === "toggle-items") {
       const itemsEl = rowEl.nextElementSibling as HTMLElement | null;
@@ -640,10 +878,10 @@ export function openManagerModal(ui: UIHandlers): void {
           }
           if (shouldSave === "confirm") {
             await createManualSnapshot();
-            renderList();
+            renderList(ui);
           }
         }
-        await replaceQueueWithSnapshot(snap, clickedButton);
+        await replaceQueueWithSnapshot(snap, clickedButton, ui);
       } finally {
         exportingIds.delete(id);
       }
@@ -664,7 +902,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const newSettings = { ...s0, autoEnabled };
       ui.setSettings(newSettings);
       closeAllInlineEditors();
-      applyControlDisabledStates();
+      applyControlDisabledStates(ui);
       return;
     }
     if ((target as HTMLInputElement).name === "qs-auto-mode") {
@@ -673,7 +911,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const mode = radio.value === "on-change" ? "on-change" : "timer";
       const newSettings: Settings = { ...s0, autoMode: mode };
       ui.setSettings(newSettings);
-      applyControlDisabledStates();
+      applyControlDisabledStates(ui);
       return;
     }
     if (target.id === "qs-only-new") {
@@ -701,7 +939,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const newSettings = { ...s0, maxAutosnapshots: max };
       ui.setSettings(newSettings);
       pruneAutosToMax(newSettings);
-      renderList();
+      renderList(ui);
       return;
     }
     if (target.id === "qs-queue-warn-enabled") {
@@ -710,7 +948,7 @@ export function openManagerModal(ui: UIHandlers): void {
       const s0 = ui.getSettings();
       const newSettings: Settings = { ...s0, queueWarnEnabled };
       ui.setSettings(newSettings);
-      applyControlDisabledStates();
+      applyControlDisabledStates(ui);
       return;
     }
     if (target.id === "qs-queue-max-size") {
@@ -748,7 +986,7 @@ export function openManagerModal(ui: UIHandlers): void {
       refreshLocale();
       renderHeader();
       renderSettings(ui);
-      renderList();
+      renderList(ui);
       return;
     }
   };
@@ -756,14 +994,15 @@ export function openManagerModal(ui: UIHandlers): void {
   document.addEventListener("click", boundClickHandler, true);
   document.addEventListener("change", boundChangeHandler, true);
 
-  applyControlDisabledStates();
+  applyControlDisabledStates(ui);
 }
 
-export function renderList(): void {
+export function renderList(ui?: UIHandlers): void {
   closeAllInlineEditors();
   const listEl = document.getElementById("qs-list");
   if (listEl) {
-    const sections = generateSectionsHTML();
+    const settings = ui?.getSettings() ?? loadSettings();
+    const sections = generateSectionsHTML(settings);
     listEl.innerHTML = sections || `<div style="opacity:0.7">${t('ui.empty.noSnapshots')}</div>`;
   }
 }

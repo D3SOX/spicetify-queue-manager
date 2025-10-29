@@ -21,6 +21,10 @@ export type TranslationKeys = {
       exportSettings: string;
       importSnapshots: string;
       importSettings: string;
+      createSyncedSnapshot: string;
+      activateSync: string;
+      exitSyncMode: string;
+      convertToManual: string;
     };
     labels: {
       snapshotName: string;
@@ -38,18 +42,24 @@ export type TranslationKeys = {
       exportAllAutos: string;
       clearAllAutos: string;
       saveNewManual: string;
+      activeSync: string;
+      syncModeDisabledActions: string;
+      convertToManual: string;
     };
     sections: {
       manualSnapshots: string;
       manualSnapshotsCaption: string;
       automaticSnapshots: string;
       automaticSnapshotsCaption: string;
+      syncedSnapshots: string;
+      syncedSnapshotsCaption: string;
       settings: string;
       settingsCaption: string;
     };
     empty: {
       noManualSnapshots: string;
       noAutomaticSnapshots: string;
+      noSyncedSnapshots: string;
       noSnapshots: string;
     };
     itemSingular: string;
@@ -62,6 +72,10 @@ export type TranslationKeys = {
     types: {
       auto: string;
       manual: string;
+      synced: string;
+    };
+    defaults: {
+      myJam: string;
     };
     actions: {
       exporting: string;
@@ -132,6 +146,16 @@ export type TranslationKeys = {
     importCanceled: string;
     failedToImportJson: string;
     failedToImportJsonAccess: string;
+    syncActivated: string;
+    syncDeactivated: string;
+    queueSyncedToSnapshot: string;
+    syncedSnapshotCreated: string;
+    failedToCreateSyncedSnapshot: string;
+    failedToActivateSync: string;
+    failedToStartSyncManager: string;
+    queueRestored: string;
+    convertedToManual: string;
+    syncedSnapshotNotFound: string;
   };
   dialogs: {
     saveSnapshot: {
@@ -161,6 +185,30 @@ export type TranslationKeys = {
       title: string;
       message: string;
       confirmLabel: string;
+    };
+    saveSyncedSnapshot: {
+      title: string;
+      message: string;
+      confirmLabel: string;
+      cancelLabel: string;
+    };
+    emptyQueueDetected: {
+      title: string;
+      message: string;
+      restore: string;
+      keepEmpty: string;
+      switchSnapshot: string;
+    };
+    convertToManual: {
+      title: string;
+      message: string;
+      confirmLabel: string;
+    };
+    switchSyncedSnapshot: {
+      title: string;
+      message: string;
+      confirmLabel: string;
+      cancelLabel: string;
     };
   };
   errors: {

@@ -1,7 +1,7 @@
-import { Snapshot, Settings, AutoMode, QueueUpdateEvent } from "./types";
+import { Snapshot, Settings, AutoMode, QueueUpdateEvent, OnProgressEvent } from "./types";
 import { getQueueFromSpicetify } from "./queue";
 import { areQueuesEqual, generateId } from "./utils";
-import { addSnapshot, getSortedSnapshots, loadSnapshots, pruneAutosToMax as storagePruneAutosToMax } from "./storage";
+import { addSnapshot, getSortedSnapshots, loadSnapshots, saveSnapshots, saveSettings } from "./storage";
 import { APP_NAME } from "./appInfo";
 import { showErrorToast, showWarningToast } from "./toast";
 import { t } from "./i18n";
@@ -24,7 +24,7 @@ export function createAutoManager(getSettings: () => Settings) {
   async function runSnapshotIfChanged(s: Settings) {
     try {
       if (!s.autoEnabled) return;
-      const currentItems = await getQueueFromSpicetify();
+      const currentItems = getQueueFromSpicetify();
       if (!currentItems.length) {
         console.log(`${APP_NAME}: queue is empty, skipping auto snapshot`);
         return;
@@ -84,17 +84,11 @@ export function createAutoManager(getSettings: () => Settings) {
     if (!s.autoEnabled) return;
 
     try {
-      type EventFunc = (event: string, callback: (...args: any[]) => void) => void;
-      const events: {
-        addListener?: EventFunc;
-        removeListener: EventFunc;
-      } | undefined = (Spicetify as any)?.Player?.origin?._events;
+      const events = Spicetify?.Player?.origin?._events;
       if (!events?.addListener || !events?.removeListener) {
-        throw new Error("queue_update events API not available");
-      }
-
-
-      const onQueueUpdate = (evt: QueueUpdateEvent) => {
+        throw new Error("events API not available");
+     }
+      const onQueueUpdate: (event?: QueueUpdateEvent) => void = (evt) => {
         runSnapshotIfChanged(s);
         //console.debug(`${APP_NAME}: queue_update`, evt);
       };
@@ -165,7 +159,7 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
       const threshold = s.queueWarnThreshold;
       if (threshold < 0 || maxSize <= 1) return;
 
-      const items = await getQueueFromSpicetify();
+      const items = getQueueFromSpicetify();
       const currentSize = items.length;
       
       // Skip if queue size hasn't increased
@@ -201,19 +195,16 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
   function start(): void {
     stop();
     try {
-      type EventFunc = (event: string, callback: (...args: any[]) => void) => void;
-      const events: {
-        addListener?: EventFunc;
-        removeListener: EventFunc;
-      } | undefined = (Spicetify as any)?.Player?.origin?._events;
+      const events = Spicetify?.Player?.origin?._events;
       if (!events?.addListener || !events?.removeListener) {
         throw new Error("queue_update events API not available");
       }
 
-      const onQueueUpdate = (_evt: QueueUpdateEvent) => {
+      const onQueueUpdate: (event?: QueueUpdateEvent) => void = (_evt) => {
         checkAndWarnOnce();
       };
       events.addListener("queue_update", onQueueUpdate);
+      
       unsubscribe = () => {
         try { events.removeListener("queue_update", onQueueUpdate); } catch (e) {
           console.error(`${APP_NAME}: failed to remove queue_update listener (capacity watcher)`, e);
@@ -228,4 +219,137 @@ export function createQueueCapacityWatcher(getSettings: () => Settings) {
   }
 
   return { start, stop, checkAndWarnOnce };
+}
+
+export function createQueueSyncManager(getSettings: () => Settings) {
+  let unsubscribe: (() => void) | null = null;
+  let lastKnownQueue: string[] = [];
+  let isActive = false;
+  let isSuspended = false;
+
+  async function updatePlaybackPosition(progressMs: number) {
+    const s = getSettings();
+    if (!s.syncedSnapshotId || !isActive) return;
+
+    const snapshots = loadSnapshots();
+    const idx = snapshots.findIndex(snap => snap.id === s.syncedSnapshotId);
+    if (idx >= 0) {
+      snapshots[idx].playbackPosition = progressMs;
+      saveSnapshots(snapshots);
+    }
+  }
+
+  async function syncQueueToSnapshot(currentQueue: string[]) {
+    const s = getSettings();
+    if (!s.syncedSnapshotId) return;
+
+    const snapshots = loadSnapshots();
+    const idx = snapshots.findIndex(snap => snap.id === s.syncedSnapshotId);
+    if (idx >= 0) {
+      // Don't sync empty queues to prevent losing the snapshot content during queue replacements
+      if (currentQueue.length === 0) {
+        console.debug(`${APP_NAME}: skipping sync of empty queue to snapshot`);
+        return;
+      }
+      snapshots[idx].items = currentQueue.slice();
+      snapshots[idx].playbackPosition = Spicetify.Player.getProgress();
+      saveSnapshots(snapshots);
+    } else {
+      // Synced snapshot no longer exists
+      console.warn(`${APP_NAME}: synced snapshot ${s.syncedSnapshotId} no longer exists, deactivating sync mode`);
+      const newSettings = { ...s, syncedSnapshotId: undefined };
+      saveSettings(newSettings);
+
+      showWarningToast(t('toasts.syncedSnapshotNotFound'));
+    }
+  }
+
+  async function handleQueueUpdate() {
+    try {
+      const s = getSettings();
+      if (!s.syncedSnapshotId || !isActive || isSuspended) return;
+
+      const currentQueue = getQueueFromSpicetify();
+      if (!areQueuesEqual(currentQueue, lastKnownQueue)) {
+        await syncQueueToSnapshot(currentQueue);
+        lastKnownQueue = currentQueue.slice();
+      }
+    } catch (e) {
+      console.error(`${APP_NAME}: queue sync error`, e);
+    }
+  }
+
+  function stop(): void {
+    if (unsubscribe) {
+      try { unsubscribe(); } catch {}
+      unsubscribe = null;
+    }
+    isActive = false;
+    isSuspended = false;
+    lastKnownQueue = [];
+  }
+
+  function start(): void {
+    stop();
+    const s = getSettings();
+    if (!s.syncedSnapshotId) return;
+
+    try {
+      const events = Spicetify?.Player?.origin?._events;
+      if (!events?.addListener || !events?.removeListener) {
+        throw new Error("events API not available");
+      }
+
+      const onQueueUpdate: (evt?: QueueUpdateEvent) => void = (_evt) => {
+        handleQueueUpdate();
+      };
+      const onProgress = (evt?: Event) => {
+        const event = evt as OnProgressEvent;
+        updatePlaybackPosition(event.data);
+      };
+
+      events.addListener("queue_update", onQueueUpdate);
+      Spicetify.Player.addEventListener("onprogress", onProgress);
+      unsubscribe = () => {
+        try { 
+          events.removeListener("queue_update", onQueueUpdate);
+          Spicetify.Player.removeEventListener("onprogress", onProgress);
+        } catch (e) {
+          console.error(`${APP_NAME}: failed to remove listeners (sync manager)`, e);
+        }
+      };
+
+      isActive = true;
+      
+      // Initialize last known queue
+      lastKnownQueue = getQueueFromSpicetify();
+    } catch (e) {
+      console.error(`${APP_NAME}: failed to start queue sync manager`, e);
+      showErrorToast(t('toasts.failedToStartSyncManager'));
+    }
+  }
+
+  function applySync(newSettings: Settings): void {
+    const shouldBeActive = !!newSettings.syncedSnapshotId;
+    
+    if (shouldBeActive && !isActive) {
+      start();
+    } else if (!shouldBeActive && isActive) {
+      stop();
+    }
+  }
+
+  function suspend(): void {
+    isSuspended = true;
+    console.debug(`${APP_NAME}: sync manager suspended`);
+  }
+
+  async function resume(): Promise<void> {
+    isSuspended = false;
+    // After resuming, capture the current queue state so we don't sync the queue replacement
+    lastKnownQueue = getQueueFromSpicetify();
+    console.debug(`${APP_NAME}: sync manager resumed`);
+  }
+
+  return { start, stop, applySync, suspend, resume };
 }

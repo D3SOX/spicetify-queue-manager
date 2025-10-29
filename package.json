@@ -1,6 +1,6 @@
 {
   "name": "queue-manager",
-  "version": "0.6.4",
+  "version": "0.7",
   "private": true,
   "scripts": {
     "build": "spicetify-creator",

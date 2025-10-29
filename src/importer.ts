@@ -8,7 +8,7 @@ import { UIHandlers } from "./ui";
 import { t } from "./i18n";
 
 function isValidSnapshot(s: any): s is Snapshot {
-    return s && typeof s.id === "string" && typeof s.createdAt === "number" && (s.type === "auto" || s.type === "manual") && Array.isArray(s.items) && s.items.every((i: any) => typeof i === "string");
+    return s && typeof s.id === "string" && typeof s.createdAt === "number" && (s.type === "auto" || s.type === "manual" || s.type === "synced") && Array.isArray(s.items) && s.items.every((i: any) => typeof i === "string");
 }
 
 function isValidSettings(s: any): s is Settings {

@@ -328,6 +328,16 @@ declare namespace Spicetify {
 				}
 			) => void
 		): void;
+
+		namespace origin {
+			namespace _events {
+				function addListener(event: string, callback: (event?: Event) => void): void;
+				function addListener(event: "queue_update", callback: (event?: QueueUpdateEvent) => void): void;
+				function removeListener(event: string, callback: (event?: Event) => void): void;
+				function removeListener(event: "queue_update", callback: (event?: QueueUpdateEvent) => void): void;
+			}
+		}
+
 		/**
 		 * Skip to previous track.
 		 */

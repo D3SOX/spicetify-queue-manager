@@ -2,6 +2,12 @@
 
 This documents the user-facing changes for each version
 
+## 0.7
+
+- Add synced snapshot mode (disables automatic snapshots while active)
+- Manual and synced snapshots now include the playback position of the current track
+- Improve extension metadata, readme and screenshots
+
 ## 0.6.4
 
 - Shorten queue warning description

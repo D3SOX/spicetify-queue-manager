@@ -476,6 +476,12 @@
 .qs-pill--channel {
   background: rgba(248, 113, 113, 0.35);
 }
+.qs-pill--active-sync {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95));
+  font-weight: bolder;
+  font-size: 14px;
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+}
 .qs-confirm-backdrop {
   position: fixed;
   inset: 0;
@@ -511,6 +517,28 @@
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+}
+
+/* Sync mode disabled states */
+.qs-section-card.qs-disabled,
+.qs-settings.qs-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.qs-section-card.qs-sync-active {
+  border: 2px solid rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.2);
+}
+
+.qs-row.qs-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qs-row.qs-disabled .qs-row-actions button {
+  pointer-events: none;
 }
 
 @media (max-width: 860px) {

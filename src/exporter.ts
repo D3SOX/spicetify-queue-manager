@@ -1,16 +1,17 @@
 import { Snapshot } from "./types";
 import { getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { getQueueFromSpicetify } from "./queue";
-import { addSnapshot } from "./storage";
-import { generateId, setButtonLabel } from "./utils";
+import { addSnapshot, loadSettings } from "./storage";
+import { generateId, setButtonLabel, areQueuesEqual } from "./utils";
 import { APP_NAME } from "./appInfo";
-import { showPromptDialog } from "./dialogs";
+import { showPromptDialog, showConfirmDialog } from "./dialogs";
 import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
 import { t } from "./i18n";
+import type { UIHandlers } from "./ui";
 
 export async function createManualSnapshot(): Promise<void> {
   try {
-    const items = await getQueueFromSpicetify();
+    const items = getQueueFromSpicetify();
     if (!items.length) {
       showWarningToast(t('toasts.noQueueFound'));
       return;
@@ -38,6 +39,7 @@ export async function createManualSnapshot(): Promise<void> {
       name: name === defaultName ? undefined : name,
       type: "manual",
       items,
+      playbackPosition: Spicetify.Player.getProgress(),
     };
     addSnapshot(snapshot);
     showSuccessToast(t('toasts.snapshotSaved'));
@@ -200,15 +202,48 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
   }
 }
 
-export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement): Promise<void> {
+export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement, uiHandlers?: UIHandlers): Promise<boolean> {
   try {
     if (!snapshot.items.length) {
       showWarningToast(t('toasts.snapshotEmpty'));
-      return;
+      return false;
     }
+    
+    // Check if the current queue already matches the snapshot - if so, skip replacement
+    const currentQueue = getQueueFromSpicetify();
+    if (areQueuesEqual(currentQueue, snapshot.items)) {
+      return false;
+    }
+    
+    // Prompt to save current queue before activation if this is a synced snapshot being activated
+    const settings = loadSettings();
+    if (settings.promptManualBeforeReplace && !settings.syncedSnapshotId && snapshot.type === "synced") {
+      const shouldSave = await showConfirmDialog({
+        title: t('dialogs.saveCurrentQueue.title'),
+        message: t('dialogs.saveCurrentQueue.message'),
+        confirmLabel: t('dialogs.saveCurrentQueue.confirmLabel'),
+        cancelLabel: t('dialogs.saveCurrentQueue.cancelLabel'),
+        extraLabel: t('dialogs.saveCurrentQueue.extraLabel'),
+        extraTone: "danger",
+        tone: "primary",
+      });
+      if (shouldSave === "extra") {
+        return false;
+      }
+      if (shouldSave === "confirm") {
+        await createManualSnapshot();
+      }
+    }
+    
     if (buttonEl) {
       buttonEl.disabled = true;
       setButtonLabel(buttonEl, t('snapshots.actions.replacing'));
+    }
+
+    // Suspend sync manager if available to prevent syncing partial queue states
+    const syncMgr = uiHandlers?.getSyncManager();
+    if (syncMgr) {
+      syncMgr.suspend();
     }
 
     const items = snapshot.items.slice();
@@ -219,6 +254,9 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     } catch (e) {
       console.warn(`${APP_NAME}: clearQueue failed (non-fatal)`, e);
     }
+
+    //  Wait for queue to be cleared before starting new track
+    await new Promise(r => setTimeout(r, 100));
 
     if (first.startsWith("spotify:local:")) {
       try {
@@ -257,6 +295,24 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     // Give the player a brief moment to switch track
     await new Promise(r => setTimeout(r, 250));
 
+    // Seek to saved position if available
+    if (snapshot.playbackPosition !== undefined && snapshot.playbackPosition > 0) {
+      try {
+        // Use Platform.PlayerAPI.seekTo as it's more reliable than Player.seek
+        await Spicetify.Platform.PlayerAPI.seekTo(snapshot.playbackPosition);
+        console.log(`${APP_NAME}: seeked to saved position ${snapshot.playbackPosition}ms`);
+      } catch (e) {
+        console.warn(`${APP_NAME}: failed to seek to saved position ${snapshot.playbackPosition}ms`, e);
+        // Try fallback API
+        try {
+          await Spicetify.Player.seek(snapshot.playbackPosition);
+          console.log(`${APP_NAME}: seeked using fallback API to ${snapshot.playbackPosition}ms`);
+        } catch (e2) {
+          console.error(`${APP_NAME}: both seek methods failed`, e2);
+        }
+      }
+    }
+
     // Enqueue remaining items in order
     let added = 0;
     for (let i = 0; i < items.length; i += 100) {
@@ -278,6 +334,11 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
     console.error(`${APP_NAME}: replace queue failed`, e);
     showErrorToast(t('toasts.failedToReplace'));
   } finally {
+    // Resume sync manager after queue replacement is complete
+    if (uiHandlers?.getSyncManager()) {
+      await uiHandlers.getSyncManager().resume();
+    }
+
     if (buttonEl) {
       buttonEl.disabled = false;
       setButtonLabel(buttonEl, t('ui.buttons.replaceQueue'));

@@ -1,7 +1,7 @@
 import { Settings } from "./types";
 import { loadSettings, saveSettings } from "./storage";
 import { openManagerModal, UIHandlers } from "./ui";
-import { createAutoManager, createQueueCapacityWatcher } from "./auto";
+import { createAutoManager, createQueueCapacityWatcher, createQueueSyncManager } from "./auto";
 import { APP_NAME } from "./appInfo";
 import { t } from "./i18n";
 
@@ -16,6 +16,11 @@ async function main() {
   autoMgr.primeFromExisting();
   autoMgr.applyAutoMode(settings);
 
+  const syncMgr = createQueueSyncManager(() => settings);
+  if (settings.syncedSnapshotId) {
+    syncMgr.applySync(settings);
+  }
+
   const capacityWatcher = createQueueCapacityWatcher(() => settings);
   capacityWatcher.start();
 
@@ -25,8 +30,10 @@ async function main() {
       settings = s;
       saveSettings(s);
       autoMgr.applyAutoMode(s);
+      syncMgr.applySync(s);
       capacityWatcher.checkAndWarnOnce();
     },
+    getSyncManager: () => syncMgr,
   };
 
   const icon = "queue";
