@@ -1,6 +1,7 @@
 <div align="center">
 
-<img width="250" alt="image" src="https://github.com/user-attachments/assets/b9ef675b-3cd9-4bcd-a512-1555e274b501" />
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/9c9c1031-c7a3-4bfb-a498-8f80f7fc7999" />
+
 
 <h1>Spicetify Queue Manager</h1>
 
