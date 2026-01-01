@@ -1,4 +1,4 @@
-import { Snapshot } from "./types";
+import { MetadataResponse, Snapshot } from "./types";
 import { formatDateTime } from "./utils";
 import { t } from "./i18n";
 
@@ -25,6 +25,31 @@ function getIdFromUri(uri: string): { type: "track" | "episode" | null; id: stri
   return { type: null, id: null };
 }
 
+function spotifyHex(spotifyId: string): string {
+  const INVALID = "00000000000000000000000000000000";
+  if (typeof spotifyId !== "string") {
+    return INVALID;
+  }
+  if (spotifyId.length === 0 || spotifyId.length > 22) {
+    return INVALID;
+  }
+  const characters =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let decimalValue = BigInt(0);
+  for (let i = 0; i < spotifyId.length; i++) {
+    const index = characters.indexOf(spotifyId[i]);
+    if (index === -1) {
+      return INVALID;
+    }
+    decimalValue = decimalValue * BigInt(62) + BigInt(index);
+  }
+  const hexValue = decimalValue.toString(16).padStart(32, "0");
+  if (hexValue.length > 32) {
+    return INVALID;
+  }
+  return hexValue;
+}
+
 export async function resolveItemNames(uris: string[]): Promise<string[]> {
   const names: string[] = new Array(uris.length).fill("");
   const trackIds: { idx: number; id: string }[] = [];
@@ -41,23 +66,81 @@ export async function resolveItemNames(uris: string[]): Promise<string[]> {
     else names[idx] = u;
   });
 
-  for (let i = 0; i < trackIds.length; i += 50) {
-    const chunk = trackIds.slice(i, i + 50);
-    const ids = chunk.map(c => c.id).join(",");
-    try {
-      const res = await Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/tracks?ids=${ids}`);
-      const arr = Array.isArray(res?.tracks) ? res.tracks : [];
-      const idToDisplay = new Map<string, string>();
-      for (const t of arr) {
-        if (t?.id && t?.name) {
-          const artists = Array.isArray(t?.artists) ? t.artists.map((a: any) => a?.name).filter(Boolean).join(", ") : "";
-          const display = artists ? `${artists} - ${t.name}` : t.name;
-          idToDisplay.set(t.id, display);
+  const token = Spicetify.Platform?.Session?.accessToken;
+  
+  if (!token) {
+    // use the old CosmosAsync method when no token is available
+    for (let i = 0; i < trackIds.length; i += 50) {
+      const chunk = trackIds.slice(i, i + 50);
+      const ids = chunk.map(c => c.id).join(",");
+      try {
+        const res = await Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/tracks?ids=${ids}`);
+        const arr = Array.isArray(res?.tracks) ? res.tracks : [];
+        const idToDisplay = new Map<string, string>();
+        for (const t of arr) {
+          if (t?.id && t?.name) {
+            const artists = Array.isArray(t?.artists) ? t.artists.map((a: any) => a?.name).filter(Boolean).join(", ") : "";
+            const display = artists ? `${artists} - ${t.name}` : t.name;
+            idToDisplay.set(t.id, display);
+          }
         }
+        for (const c of chunk) names[c.idx] = idToDisplay.get(c.id) || uris[c.idx];
+      } catch {
+        for (const c of chunk) names[c.idx] = uris[c.idx];
       }
-      for (const c of chunk) names[c.idx] = idToDisplay.get(c.id) || uris[c.idx];
-    } catch {
-      for (const c of chunk) names[c.idx] = uris[c.idx];
+    }
+  } else {
+    // Fetch tracks using the new endpoint after Spotify API changes
+    for (let i = 0; i < trackIds.length; i += 50) {
+      const chunk = trackIds.slice(i, i + 50);
+      try {
+        const promises = chunk.map(async (c) => {
+          const hexId = spotifyHex(c.id);
+          
+          if (hexId === "00000000000000000000000000000000") {
+            return { idx: c.idx, id: c.id, display: null };
+          }
+          try {
+            const response = await fetch(
+              `https://spclient.wg.spotify.com/metadata/4/track/${hexId}?market=from_token`,
+              {
+                method: "GET",
+                headers: {
+                  Accept: "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            
+            if (!response.ok) {
+              return { idx: c.idx, id: c.id, display: null };
+            }
+            
+            const data: MetadataResponse = await response.json();
+            
+            const trackName = data?.name;
+            const artists = data?.artist || [];
+            const artistNames = Array.isArray(artists)
+              ? artists.map((a) => a?.name).filter(Boolean).join(", ")
+              : "";
+            const display = trackName
+              ? artistNames
+                ? `${artistNames} - ${trackName}`
+                : trackName
+              : null;
+            
+            return { idx: c.idx, id: c.id, display };
+          } catch {
+            return { idx: c.idx, id: c.id, display: null };
+          }
+        });
+        const results = await Promise.all(promises);
+        for (const result of results) {
+          names[result.idx] = result.display || uris[result.idx];
+        }
+      } catch {
+        for (const c of chunk) names[c.idx] = uris[c.idx];
+      }
     }
   }
 
@@ -89,7 +172,9 @@ export async function resolveItemNames(uris: string[]): Promise<string[]> {
 const namesCacheBySnapshotId = new Map<string, string[]>();
 
 export async function getSnapshotItemNames(snapshot: Snapshot): Promise<string[]> {
-  if (namesCacheBySnapshotId.has(snapshot.id)) return namesCacheBySnapshotId.get(snapshot.id)!;
+  if (namesCacheBySnapshotId.has(snapshot.id)) {
+    return namesCacheBySnapshotId.get(snapshot.id)!;
+  }
   const names = await resolveItemNames(snapshot.items);
   namesCacheBySnapshotId.set(snapshot.id, names);
   return names;
