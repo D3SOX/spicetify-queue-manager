@@ -43,11 +43,11 @@ For changes, see [CHANGELOG.md](https://github.com/D3SOX/spicetify-queue-manager
 
 ## Development
 
-Requires [Spicetify CLI](https://spicetify.app) and [pnpm](https://pnpm.io).
+Requires [Spicetify CLI](https://spicetify.app) and [Bun](https://bun.sh).
 
 ```bash
-pnpm install
-pnpm build   # or: pnpm watch
+bun install
+bun run build   # or: bun watch
 spicetify extensions queue-manager.js
 spicetify apply -n
 ```
