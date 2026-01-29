@@ -1,10 +1,10 @@
 import { showConfirmDialog } from "./dialogs";
 import { loadSnapshots, saveSnapshots } from "./storage";
 import { showErrorToast, showSuccessToast } from "./toast";
-import { Settings, Snapshot } from "./types";
+import type { Settings, Snapshot } from "./types";
 import { uploadJson } from "./utils";
 import { renderList, renderSettings } from "./ui";
-import { UIHandlers } from "./ui";
+import type { UIHandlers } from "./ui";
 import { t } from "./i18n";
 
 function isValidSnapshot(s: any): s is Snapshot {

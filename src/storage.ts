@@ -1,4 +1,4 @@
-import { Settings, Snapshot } from "./types";
+import type { Settings, Snapshot } from "./types";
 
 const SETTINGS_KEY = "queue-manager:settings";
 const DEFAULT_SETTINGS: Settings = {

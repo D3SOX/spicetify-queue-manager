@@ -1,5 +1,5 @@
 import { APP_NAME } from "./appInfo";
-import { showErrorToast, showSuccessToast, showWarningToast } from "./toast";
+import { showErrorToast, showSuccessToast } from "./toast";
 import { t } from "./i18n";
 export const DEFAULT_ICON_SIZE = 16;
 

@@ -1,4 +1,4 @@
-import { ButtonTone } from "./types";
+import type { ButtonTone } from "./types";
 import { t } from "./i18n";
 
 type ConfirmDialogOptions = {

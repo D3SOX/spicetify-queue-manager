@@ -1,6 +1,6 @@
-import { Settings } from "./types";
+import type { Settings } from "./types";
 import { loadSettings, saveSettings } from "./storage";
-import { openManagerModal, UIHandlers } from "./ui";
+import { openManagerModal, type UIHandlers } from "./ui";
 import { createAutoManager, createQueueCapacityWatcher, createQueueSyncManager } from "./auto";
 import { APP_NAME } from "./appInfo";
 import { t } from "./i18n";

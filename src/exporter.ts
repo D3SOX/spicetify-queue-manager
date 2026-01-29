@@ -1,4 +1,4 @@
-import { Snapshot } from "./types";
+import type { Snapshot } from "./types";
 import { getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { getQueueFromSpicetify } from "./queue";
 import { addSnapshot, loadSettings } from "./storage";
@@ -202,17 +202,17 @@ export async function appendSnapshotToQueue(snapshot: Snapshot, buttonEl?: HTMLB
   }
 }
 
-export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement, uiHandlers?: UIHandlers): Promise<boolean> {
+export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HTMLButtonElement, uiHandlers?: UIHandlers): Promise<void> {
   try {
     if (!snapshot.items.length) {
       showWarningToast(t('toasts.snapshotEmpty'));
-      return false;
+      return;
     }
     
     // Check if the current queue already matches the snapshot - if so, skip replacement
     const currentQueue = getQueueFromSpicetify();
     if (areQueuesEqual(currentQueue, snapshot.items)) {
-      return false;
+      return;
     }
     
     // Prompt to save current queue before activation if this is a synced snapshot being activated
@@ -228,7 +228,7 @@ export async function replaceQueueWithSnapshot(snapshot: Snapshot, buttonEl?: HT
         tone: "primary",
       });
       if (shouldSave === "extra") {
-        return false;
+        return;
       }
       if (shouldSave === "confirm") {
         await createManualSnapshot();

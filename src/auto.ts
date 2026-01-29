@@ -1,4 +1,4 @@
-import { Snapshot, Settings, AutoMode, QueueUpdateEvent, OnProgressEvent } from "./types";
+import type { Snapshot, Settings, AutoMode, QueueUpdateEvent, OnProgressEvent } from "./types";
 import { getQueueFromSpicetify } from "./queue";
 import { areQueuesEqual, generateId } from "./utils";
 import { addSnapshot, getSortedSnapshots, loadSnapshots, saveSnapshots, saveSettings } from "./storage";

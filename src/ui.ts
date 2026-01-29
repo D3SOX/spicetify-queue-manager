@@ -1,6 +1,6 @@
 import "./ui.css";
 
-import { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
+import type { Snapshot, Settings, ButtonRenderOptions, BadgeVariant } from "./types";
 import { loadSnapshots, pruneAutosToMax, saveSnapshots, clearAutoSnapshots, loadSettings, saveSettings, getSyncedSnapshots } from "./storage";
 import { getSnapshotItemNames, getSnapshotDisplayName, getSnapshotGeneratedNameFor } from "./names";
 import { escapeHtml, downloadJson, setButtonLabel, getIconMarkup, setButtonIcon, generateId, areQueuesEqual } from "./utils";
@@ -9,7 +9,7 @@ import { createManualSnapshot, exportSnapshotToPlaylist, replaceQueueWithSnapsho
 import { APP_CHANNEL, APP_NAME, APP_NAME_SLUG, APP_VERSION } from "./appInfo";
 import { getSortedSnapshots } from "./storage";
 import { showConfirmDialog, showPromptDialog } from "./dialogs";
-import { createQueueSyncManager } from "./auto";
+import type { createQueueSyncManager } from "./auto";
 import { importSettings, importSnapshots } from "./importer";
 import { t, refreshLocale } from "./i18n";
 import { getQueueFromSpicetify } from "./queue";

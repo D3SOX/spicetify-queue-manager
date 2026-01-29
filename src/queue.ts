@@ -28,7 +28,7 @@ export function getQueueFromSpicetify(): string[] {
     if (current) list.push(current);
 
     const nextArr = q?.nextTracks || [];
-    let queuedCount = 0;
+    // let queuedCount = 0;
     for (const it of Array.isArray(nextArr) ? nextArr : []) {
       const provider: string | undefined = it?.provider;
       const meta = it?.contextTrack?.metadata || it?.metadata;
@@ -38,7 +38,7 @@ export function getQueueFromSpicetify(): string[] {
       const uri = getTrackUri(it);
       if (uri) {
         list.push(uri);
-        queuedCount++;
+        // queuedCount++;
       }
     }
     const out = list.length ? dedupeConsecutive(list) : [];
