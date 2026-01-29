@@ -1,6 +1,6 @@
 {
   "name": "queue-manager",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "scripts": {
     "update-types": "curl -s -o ./src/types/spicetify.d.ts https://raw.githubusercontent.com/spicetify/spicetify-cli/master/globals.d.ts",

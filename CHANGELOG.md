@@ -2,6 +2,10 @@
 
 This documents the user-facing changes for each version
 
+## 0.7.2
+
+- Fix displaying names for Spotify podcast episodes after Spotify API changes
+
 ## 0.7.1
 
 - Fix displaying names for Spotify tracks after Spotify API changes
