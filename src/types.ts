@@ -1,143 +1,263 @@
 export type SnapshotType = "auto" | "manual" | "synced";
 
 export type Snapshot = {
-  id: string;
-  createdAt: number;
-  name?: string;
-  type: SnapshotType;
-  items: string[];
-  playbackPosition?: number; // milliseconds
+	id: string;
+	createdAt: number;
+	name?: string;
+	type: SnapshotType;
+	items: string[];
+	playbackPosition?: number; // milliseconds
 };
 
 export type AutoMode = "timer" | "on-change";
 
 export type Settings = {
-  autoEnabled: boolean;
-  autoIntervalMs: number;
-  maxAutosnapshots: number;
-  autoMode: AutoMode;
-  onlyNewItems: boolean;
-  queueWarnEnabled: boolean;
-  queueMaxSize: number;
-  queueWarnThreshold: number;
-  promptManualBeforeReplace: boolean;
-  language?: string;
-  settingsCollapsed: boolean;
-  syncedSnapshotId?: string;
+	autoEnabled: boolean;
+	autoIntervalMs: number;
+	maxAutosnapshots: number;
+	autoMode: AutoMode;
+	onlyNewItems: boolean;
+	queueWarnEnabled: boolean;
+	queueMaxSize: number;
+	queueWarnThreshold: number;
+	promptManualBeforeReplace: boolean;
+	language?: string;
+	settingsCollapsed: boolean;
+	syncedSnapshotId?: string;
 };
 
 export type BadgeVariant =
-  | "default"
-  | "accent"
-  | "version"
-  | "channel"
-  | "active-sync";
+	| "default"
+	| "accent"
+	| "version"
+	| "channel"
+	| "active-sync";
 
 export type ButtonTone = "primary" | "danger" | "subtle" | "default";
 
 export type ButtonRenderOptions = {
-  action?: string;
-  id?: string;
-  tone?: ButtonTone;
-  title?: string;
+	action?: string;
+	id?: string;
+	tone?: ButtonTone;
+	title?: string;
 };
 
 export type QueueUpdateEventData = {
-  current: Spicetify.PlayerTrack;
-  queued: Spicetify.PlayerTrack[];
-  nextUp: Spicetify.PlayerTrack[];
+	current: Spicetify.PlayerTrack;
+	queued: Spicetify.PlayerTrack[];
+	nextUp: Spicetify.PlayerTrack[];
 };
 
 export type QueueUpdateEvent = Event & {
-  type: "queue_update";
-  data: QueueUpdateEventData;
+	type: "queue_update";
+	data: QueueUpdateEventData;
 };
 export type OnProgressEvent = Event & { type: "onprogress"; data: number };
 
 export interface MetadataResponse {
-  gid: string;
-  name: string;
-  album: Album;
-  artist: Artist[];
-  number: number;
-  disc_number: number;
-  duration: number;
-  popularity: number;
-  external_id: ExternalID[];
-  earliest_live_timestamp: number;
-  licensor: Licensor;
-  language_of_performance: string[];
-  original_audio: OriginalAudio;
-  original_title: string;
-  artist_with_role: ArtistWithRole[];
-  canonical_uri: string;
-  content_authorization_attributes: string;
-  audio_formats: AudioFormat[];
-  media_type: string;
-  implementation_details: ImplementationDetails;
+	gid: string;
+	name: string;
+	album: Album;
+	artist: Artist[];
+	number: number;
+	disc_number: number;
+	duration: number;
+	popularity: number;
+	external_id: ExternalID[];
+	earliest_live_timestamp: number;
+	licensor: Licensor;
+	language_of_performance: string[];
+	original_audio: OriginalAudio;
+	original_title: string;
+	artist_with_role: ArtistWithRole[];
+	canonical_uri: string;
+	content_authorization_attributes: string;
+	audio_formats: AudioFormat[];
+	media_type: string;
+	implementation_details: ImplementationDetails;
 }
 
 export interface Album {
-  gid: string;
-  name: string;
-  artist: Artist[];
-  label: string;
-  date: DateClass;
-  cover_group: CoverGroup;
-  licensor: Licensor;
+	gid: string;
+	name: string;
+	artist: Artist[];
+	label: string;
+	date: DateClass;
+	cover_group: CoverGroup;
+	licensor: Licensor;
 }
 
 export interface Artist {
-  gid: string;
-  name: string;
+	gid: string;
+	name: string;
 }
 
 export interface CoverGroup {
-  image: Image[];
+	image: Image[];
 }
 
 export interface Image {
-  file_id: string;
-  size: string;
-  width: number;
-  height: number;
+	file_id: string;
+	size: string;
+	width: number;
+	height: number;
 }
 
 export interface DateClass {
-  year: number;
-  month: number;
-  day: number;
+	year: number;
+	month: number;
+	day: number;
 }
 
 export interface Licensor {
-  uuid: string;
+	uuid: string;
 }
 
 export interface ArtistWithRole {
-  artist_gid: string;
-  artist_name: string;
-  role: string;
+	artist_gid: string;
+	artist_name: string;
+	role: string;
 }
 
 export interface AudioFormat {
-  original_audio: OriginalAudio;
+	original_audio: OriginalAudio;
 }
 
 export interface OriginalAudio {
-  uuid: string;
-  format: string;
+	uuid: string;
+	format: string;
 }
 
 export interface ExternalID {
-  type: string;
-  id: string;
+	type: string;
+	id: string;
 }
 
 export interface ImplementationDetails {
-  catalog_insertion_date: CatalogInsertionDate;
+	catalog_insertion_date: CatalogInsertionDate;
 }
 
 export interface CatalogInsertionDate {
-  seconds: number;
-  nanos: number;
+	seconds: number;
+	nanos: number;
+}
+
+export interface PodcastEpisode {
+	type: string;
+	uri: string;
+	name: string;
+	description: string;
+	htmlDescription: string;
+	episodeType: string;
+	coverArt: CoverArt[];
+	playedState: PlayedState;
+	mediaTypes: string[];
+	audio: Audio;
+	audioPreview: null;
+	sharingInfo: null;
+	segmentsCount: number;
+	podcast: Podcast;
+	podcastSubscription: PodcastSubscription;
+	releaseDate: ReleaseDate;
+	playability: Playability;
+	contentRating: ContentRating;
+	duration: Duration;
+	contentInformation: null;
+	transcript: any[];
+	gatedEntityRelations: GatedEntityRelations;
+	hasGatedEntityRelationAccess: boolean;
+	dynamicColors: DynamicColors;
+	sixteenByNineCoverImages: null;
+}
+
+export interface Audio {
+	items: any[];
+}
+
+export interface ContentRating {
+	label: string;
+}
+
+export interface CoverArt {
+	url: string;
+	width: number;
+	height: number;
+}
+
+export interface Duration {
+	milliseconds: number;
+}
+
+export interface DynamicColors {
+	encoreBaseSetTextColor: EncoreBaseSetTextColor;
+	minContrast: Contrast;
+	highContrast: Contrast;
+	higherContrast: Contrast;
+}
+
+export interface EncoreBaseSetTextColor {
+	rgb: RGB;
+	hsl: Hsl;
+	hsv: Hsv;
+	a: number;
+}
+
+export interface Hsl {
+	h: number;
+	s: number;
+	l: number;
+}
+
+export interface Hsv {
+	h: number;
+	s: number;
+	v: number;
+}
+
+export interface RGB {
+	r: number;
+	g: number;
+	b: number;
+	a: number;
+}
+
+export interface Contrast {
+	backgroundBase: EncoreBaseSetTextColor;
+	backgroundTintedBase: EncoreBaseSetTextColor;
+	textBase: EncoreBaseSetTextColor;
+	textBrightAccent: EncoreBaseSetTextColor;
+	textSubdued: EncoreBaseSetTextColor;
+}
+
+export interface GatedEntityRelations {
+	entitiesWithValueProps: any[];
+}
+
+export interface Playability {
+	playable: boolean;
+	reason: string;
+}
+
+export interface PlayedState {
+	playPositionMilliseconds: number;
+	playPosition: number;
+	state: string;
+}
+
+export interface Podcast {
+	uri: string;
+	name: string;
+	coverArt: CoverArt[];
+	trailer: null;
+	showTypes: any[];
+}
+
+export interface PodcastSubscription {
+	isPaywalled: boolean;
+	isUserSubscribed: boolean;
+}
+
+export interface ReleaseDate {
+	isoString: Date;
+	precision: string;
 }

@@ -1,4 +1,4 @@
-import type { MetadataResponse, Snapshot } from "./types";
+import type { MetadataResponse, PodcastEpisode, Snapshot } from "./types";
 import { formatDateTime } from "./utils";
 import { t } from "./i18n";
 
@@ -80,27 +80,31 @@ export async function resolveItemNames(uris: string[]): Promise<string[]> {
   }
 
   if (episodeIds.length) {
-    for (let i = 0; i < episodeIds.length; i += 50) {
-      const chunk = episodeIds.slice(i, i + 50);
-      const ids = chunk.map((c) => c.id).join(",");
-      try {
-        // TODO: this needs a new endpoint because it will get 429 too many requests errors
-        // TODO: I tried the same method we use for tracks now but it didn't work because it returned a 404
-        const res = await Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/episodes?ids=${ids}`);
-        const arr = Array.isArray(res?.episodes) ? res.episodes : [];
-        const idToDisplay = new Map<string, string>();
-        for (const t of arr) {
-          if (t?.id && t?.name) {
-            const showName = t?.show?.name;
-            const display = showName ? `${showName} - ${t.name}` : t.name;
-            idToDisplay.set(t.id, display);
-          }
-        }
-        for (const c of chunk) names[c.idx] = idToDisplay.get(c.id) || uris[c.idx];
-      } catch {
-        for (const c of chunk) names[c.idx] = uris[c.idx];
+    const promises = episodeIds.map(async (c) => {
+      const episodeUri = uris[c.idx];
+      const data: PodcastEpisode = await Spicetify.Platform.ShowAPI.getEpisodeOrChapter(episodeUri);
+      const episodeName = data?.name;
+      const showName = data?.podcast?.name;
+      const display = episodeName
+        ? showName
+          ? `${showName} - ${episodeName}`
+          : episodeName
+        : null;
+      return { idx: c.idx, id: c.id, display };
+    });
+
+    const results = await Promise.allSettled(promises);
+
+    results.forEach((result, index) => {
+      const { idx } = episodeIds[index];
+
+      if (result.status === "fulfilled") {
+        const value = result.value;
+        names[value.idx] = value.display || uris[value.idx];
+      } else {
+        names[idx] = uris[idx];
       }
-    }
+    });
   }
 
   return names;
