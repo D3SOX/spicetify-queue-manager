@@ -3,6 +3,7 @@
   "version": "0.7.1",
   "private": true,
   "scripts": {
+    "update-types": "curl -s -o ./src/types/spicetify.d.ts https://raw.githubusercontent.com/spicetify/spicetify-cli/master/globals.d.ts",
     "build": "spicetify-creator",
     "build-local": "spicetify-creator --out=dist --minify",
     "watch": "spicetify-creator --watch"
